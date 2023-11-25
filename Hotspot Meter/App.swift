@@ -17,7 +17,7 @@ public enum Keys {
 }
 
 @main
-struct MenuBarApp: App {
+struct MenuBar: App {
     @StateObject private var menuHandler = MenuHandler()
     
     var body: some Scene {
