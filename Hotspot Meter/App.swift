@@ -12,7 +12,6 @@ import ServiceManagement
 
 public enum Keys {
     static let displayMode = "displayMode"
-    static let runAtStartup = "runAtStartup"
     static let allTimeDataRecord = "allTimeDataRecord"
 }
 
@@ -188,6 +187,24 @@ class MenuHandler: NSObject, ObservableObject {
         }
     }
     
+    @Published var isRunAtStartupEnabled: Bool {
+        didSet {
+            updateRunAtStartupPreference()
+        }
+    }
+    
+    func updateRunAtStartupPreference() {
+        do {
+            if isRunAtStartupEnabled {
+                try SMAppService.mainApp.register()
+            } else {
+                try SMAppService.mainApp.unregister()
+            }
+        } catch {
+            print("Error while updating run at startup status: \(error)")
+        }
+    }
+    
     let monitor = NWPathMonitor()
     var stopPollingTimer: Timer?
     var currentState: NetworkState?
@@ -356,24 +373,8 @@ class MenuHandler: NSObject, ObservableObject {
         lastDataUsage = currentDataUsage
     }
     
-    @Published var isRunAtStartupEnabled: Bool {
-        didSet {
-            UserDefaults.standard.set(isRunAtStartupEnabled, forKey: Keys.runAtStartup)
-            
-            do {
-                if isRunAtStartupEnabled {
-                    try SMAppService.mainApp.register()
-                } else {
-                    try SMAppService.mainApp.unregister()
-                }
-            } catch {
-                print("Error while updating run at startup status: \(error)")
-            }
-        }
-    }
-    
     override init() {
-        self.isRunAtStartupEnabled = UserDefaults.standard.bool(forKey: Keys.runAtStartup)
+        self.isRunAtStartupEnabled = (SMAppService.mainApp.status == .enabled)
         
         if let savedDisplayMode = UserDefaults.standard.string(forKey: Keys.displayMode),
            let displayMode = DisplayMode(rawValue: savedDisplayMode) {
