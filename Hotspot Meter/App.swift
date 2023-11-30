@@ -21,7 +21,6 @@ struct MenuBar: App {
     
     var body: some Scene {
         MenuBarExtra {
-            Divider()
             Text("Total Usage")
                 .font(.system(.body, weight: .medium))
             Menu {
