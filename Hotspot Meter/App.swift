@@ -44,17 +44,17 @@ struct MenuBar: App {
             }
             if !menuHandler.recentSessions.isEmpty {
                 Divider()
-                Text("Recent")
-                    .font(.system(.body, weight: .medium))
-                ForEach(menuHandler.recentSessions.indices, id: \.self) { index in
-                    let session = menuHandler.recentSessions[index]
-                    Menu("\(session.total)") {
-                        Text("\(session.date.formattedForRecentSessions())")
-                        Divider()
-                        Text("All: \(session.total)")
-                        Text("Sent: \(session.sent)")
-                        Text("Received: \(session.received)")
+                Menu("Recent Sessions") {
+                    ForEach(menuHandler.recentSessions.indices, id: \.self) { index in
+                        let session = menuHandler.recentSessions[index]
+                        Menu("\(session.date.formattedForRecentSessions()), \(session.total)") {
+                            Text("All: \(session.total)")
+                            Text("Sent: \(session.sent)")
+                            Text("Received: \(session.received)")
+                        }
                     }
+                    Divider()
+                    Button("Clear", action: menuHandler.clearSessions)
                 }
             }
             Divider()
@@ -63,7 +63,6 @@ struct MenuBar: App {
                     Text(mode.rawValue).tag(mode)
                 }
             }.pickerStyle(MenuPickerStyle())
-            Divider()
             Toggle("Start at Login", isOn: $menuHandler.isRunAtStartupEnabled)
             Divider()
             Button("Quit") {
@@ -395,6 +394,11 @@ class MenuHandler: NSObject, ObservableObject {
         saveAllTimeData()
     }
     
+    func clearSessions() {
+        recentSessions.removeAll()
+        UserDefaults.standard.removeObject(forKey: "recentSessions")
+    }
+    
     func setBaselineValues() {
         let currentDataUsage = SystemDataUsage.getDataUsage()
         baselineWifiReceived = currentDataUsage.wifiReceived
@@ -471,19 +475,29 @@ extension Date {
     func formattedForRecentSessions() -> String {
         let calendar = Calendar.current
         let now = Date()
-        let currentYear = calendar.component(.year, from: now)
-        let thisDateYear = calendar.component(.year, from: self)
         
-        let dateFormatter = DateFormatter()
-        
-        if currentYear == thisDateYear {
-            dateFormatter.dateFormat = "MMM d, HH:mm"
+        if calendar.isDateInToday(self) {
+            return "Today, \(self.formatTime())"
+        } else if calendar.isDateInYesterday(self) {
+            return "Yesterday, \(self.formatTime())"
         } else {
-            dateFormatter.dateFormat = "MMM d, yyyy, HH:mm"
+            let currentYear = calendar.component(.year, from: now)
+            let thisDateYear = calendar.component(.year, from: self)
+            let dateFormatter = DateFormatter()
+            
+            if currentYear == thisDateYear {
+                dateFormatter.dateFormat = "MMMM d, HH:mm"
+            } else {
+                dateFormatter.dateFormat = "MMMM d, yyyy, HH:mm"
+            }
+            
+            return dateFormatter.string(from: self)
         }
-        
+    }
+
+    private func formatTime() -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "HH:mm"
         return dateFormatter.string(from: self)
     }
 }
-
-
