@@ -22,7 +22,7 @@ struct MenuBar: App {
     init() {
         let defaultTotalData = TotalData(sent: 0, received: 0, total: 0)
         let defaultTotalDataEncoded = try? JSONEncoder().encode(defaultTotalData)
-
+        
         UserDefaults.standard.register(defaults: [
             Keys.displayMode: DisplayMode.combined.rawValue,
             Keys.allTimeDataRecord: defaultTotalDataEncoded ?? Data()
@@ -41,6 +41,21 @@ struct MenuBar: App {
                 Button("Reset", action: menuHandler.resetAllTimeData)
             } label: {
                 Text("\(menuHandler.allTimeData.total.formattedDataString())")
+            }
+            if !menuHandler.recentSessions.isEmpty {
+                Divider()
+                Text("Recent")
+                    .font(.system(.body, weight: .medium))
+                ForEach(menuHandler.recentSessions.indices, id: \.self) { index in
+                    let session = menuHandler.recentSessions[index]
+                    Menu("\(session.total)") {
+                        Text("\(session.date.formattedForRecentSessions())")
+                        Divider()
+                        Text("All: \(session.total)")
+                        Text("Sent: \(session.sent)")
+                        Text("Received: \(session.received)")
+                    }
+                }
             }
             Divider()
             Picker("Counter Display", selection: $menuHandler.currentDisplayMode) {
@@ -61,6 +76,8 @@ struct MenuBar: App {
                 HStack {
                     Image(systemName: "arrow.up.arrow.down")
                     if !menuHandler.allDataText.isEmpty {
+                        Text(menuHandler.allDataText)
+                            .font(.system(.body, design: .monospaced))
                         Text(menuHandler.allDataText)
                             .font(.system(.body, design: .monospaced))
                     }
@@ -174,12 +191,21 @@ struct TotalData: Codable {
     var total: UInt64
 }
 
+struct SessionData: Codable {
+    let date: Date
+    let sent: String
+    let received: String
+    let total: String
+}
+
 class MenuHandler: NSObject, ObservableObject {
     enum NetworkState {
         case expensive, cheap
     }
     
     @Published var allTimeData = TotalData(sent: 0, received: 0, total: 0)
+    @Published var recentSessions: [SessionData] = []
+    
     private var lastDataUsage = DataUsageInfo()
     
     private var dataPollingTimer: Timer?
@@ -234,6 +260,9 @@ class MenuHandler: NSObject, ObservableObject {
                     
                     if let lastDetection = self.lastExpensiveDetectionTime,
                        Date().timeIntervalSince(lastDetection) > 3.5 {
+                        if !self.allDataTextIsEmpty {
+                            self.saveSession()
+                        }
                         self.stopPollingData()
                         self.setBaselineValues()
                     }
@@ -255,6 +284,7 @@ class MenuHandler: NSObject, ObservableObject {
                     guard self.currentState != .cheap else { return }
                     
                     print("cheap connection detected")
+                    self.saveSession()
                     self.stopPollingData()
                     
                     self.currentState = .cheap
@@ -281,6 +311,32 @@ class MenuHandler: NSObject, ObservableObject {
         resetDataUsageCounters()
         
         isActive = false
+    }
+    
+    func saveSession() {
+        print("Saving session")
+        let session = SessionData(
+            date: Date(),
+            sent: uploadedText,
+            received: downloadedText,
+            total: allDataText
+        )
+        
+        recentSessions.insert(session, at: 0)
+        if recentSessions.count > 5 {
+            recentSessions.removeLast()
+        }
+        
+        if let data = try? JSONEncoder().encode(recentSessions) {
+            UserDefaults.standard.set(data, forKey: "recentSessions")
+        }
+    }
+    
+    private func loadRecentSessions() {
+        if let data = UserDefaults.standard.data(forKey: "recentSessions"),
+           let sessions = try? JSONDecoder().decode([SessionData].self, from: data) {
+            self.recentSessions = sessions
+        }
     }
     
     func invalidatePollingTimer() {
@@ -402,6 +458,7 @@ class MenuHandler: NSObject, ObservableObject {
         super.init()
         
         setBaselineValues()
+        loadRecentSessions()
         startMonitoringNetwork()
     }
     
@@ -409,3 +466,24 @@ class MenuHandler: NSObject, ObservableObject {
         stopPollingData()
     }
 }
+
+extension Date {
+    func formattedForRecentSessions() -> String {
+        let calendar = Calendar.current
+        let now = Date()
+        let currentYear = calendar.component(.year, from: now)
+        let thisDateYear = calendar.component(.year, from: self)
+        
+        let dateFormatter = DateFormatter()
+        
+        if currentYear == thisDateYear {
+            dateFormatter.dateFormat = "MMM d, HH:mm"
+        } else {
+            dateFormatter.dateFormat = "MMM d, yyyy, HH:mm"
+        }
+        
+        return dateFormatter.string(from: self)
+    }
+}
+
+
