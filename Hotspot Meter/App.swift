@@ -19,6 +19,16 @@ public enum Keys {
 struct MenuBar: App {
     @StateObject private var menuHandler = MenuHandler()
     
+    init() {
+        let defaultTotalData = TotalData(sent: 0, received: 0, total: 0)
+        let defaultTotalDataEncoded = try? JSONEncoder().encode(defaultTotalData)
+
+        UserDefaults.standard.register(defaults: [
+            Keys.displayMode: DisplayMode.combined.rawValue,
+            Keys.allTimeDataRecord: defaultTotalDataEncoded ?? Data()
+        ])
+    }
+    
     var body: some Scene {
         MenuBarExtra {
             Text("Total Usage")
