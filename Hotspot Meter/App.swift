@@ -322,7 +322,7 @@ class MenuHandler: NSObject, ObservableObject {
         )
         
         recentSessions.insert(session, at: 0)
-        if recentSessions.count > 5 {
+        if recentSessions.count > 6 {
             recentSessions.removeLast()
         }
         
