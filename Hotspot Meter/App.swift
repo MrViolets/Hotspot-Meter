@@ -22,7 +22,7 @@ struct MenuBar: App {
     init() {
         let defaultTotalData = TotalData(sent: 0, received: 0, total: 0)
         let defaultTotalDataEncoded = try? JSONEncoder().encode(defaultTotalData)
-
+        
         UserDefaults.standard.register(defaults: [
             Keys.displayMode: DisplayMode.combined.rawValue,
             Keys.allTimeDataRecord: defaultTotalDataEncoded ?? Data()
@@ -42,13 +42,27 @@ struct MenuBar: App {
             } label: {
                 Text("\(menuHandler.allTimeData.total.formattedDataString())")
             }
+            if !menuHandler.recentSessions.isEmpty {
+                Divider()
+                Menu("Recent Sessions") {
+                    ForEach(menuHandler.recentSessions.indices, id: \.self) { index in
+                        let session = menuHandler.recentSessions[index]
+                        Menu("\(session.date.formattedForRecentSessions()), \(session.total)") {
+                            Text("All: \(session.total)")
+                            Text("Sent: \(session.sent)")
+                            Text("Received: \(session.received)")
+                        }
+                    }
+                    Divider()
+                    Button("Clear", action: menuHandler.clearSessions)
+                }
+            }
             Divider()
             Picker("Counter Display", selection: $menuHandler.currentDisplayMode) {
                 ForEach(DisplayMode.allCases, id: \.self) { mode in
                     Text(mode.rawValue).tag(mode)
                 }
             }.pickerStyle(MenuPickerStyle())
-            Divider()
             Toggle("Start at Login", isOn: $menuHandler.isRunAtStartupEnabled)
             Divider()
             Button("Quit") {
@@ -61,6 +75,8 @@ struct MenuBar: App {
                 HStack {
                     Image(systemName: "arrow.up.arrow.down")
                     if !menuHandler.allDataText.isEmpty {
+                        Text(menuHandler.allDataText)
+                            .font(.system(.body, design: .monospaced))
                         Text(menuHandler.allDataText)
                             .font(.system(.body, design: .monospaced))
                     }
@@ -174,12 +190,21 @@ struct TotalData: Codable {
     var total: UInt64
 }
 
+struct SessionData: Codable {
+    let date: Date
+    let sent: String
+    let received: String
+    let total: String
+}
+
 class MenuHandler: NSObject, ObservableObject {
     enum NetworkState {
         case expensive, cheap
     }
     
     @Published var allTimeData = TotalData(sent: 0, received: 0, total: 0)
+    @Published var recentSessions: [SessionData] = []
+    
     private var lastDataUsage = DataUsageInfo()
     
     private var dataPollingTimer: Timer?
@@ -234,6 +259,9 @@ class MenuHandler: NSObject, ObservableObject {
                     
                     if let lastDetection = self.lastExpensiveDetectionTime,
                        Date().timeIntervalSince(lastDetection) > 3.5 {
+                        if !self.allDataTextIsEmpty {
+                            self.saveSession()
+                        }
                         self.stopPollingData()
                         self.setBaselineValues()
                     }
@@ -255,6 +283,7 @@ class MenuHandler: NSObject, ObservableObject {
                     guard self.currentState != .cheap else { return }
                     
                     print("cheap connection detected")
+                    self.saveSession()
                     self.stopPollingData()
                     
                     self.currentState = .cheap
@@ -281,6 +310,32 @@ class MenuHandler: NSObject, ObservableObject {
         resetDataUsageCounters()
         
         isActive = false
+    }
+    
+    func saveSession() {
+        print("Saving session")
+        let session = SessionData(
+            date: Date(),
+            sent: uploadedText,
+            received: downloadedText,
+            total: allDataText
+        )
+        
+        recentSessions.insert(session, at: 0)
+        if recentSessions.count > 6 {
+            recentSessions.removeLast()
+        }
+        
+        if let data = try? JSONEncoder().encode(recentSessions) {
+            UserDefaults.standard.set(data, forKey: "recentSessions")
+        }
+    }
+    
+    private func loadRecentSessions() {
+        if let data = UserDefaults.standard.data(forKey: "recentSessions"),
+           let sessions = try? JSONDecoder().decode([SessionData].self, from: data) {
+            self.recentSessions = sessions
+        }
     }
     
     func invalidatePollingTimer() {
@@ -337,6 +392,11 @@ class MenuHandler: NSObject, ObservableObject {
     func resetAllTimeData() {
         allTimeData = TotalData(sent: 0, received: 0, total: 0)
         saveAllTimeData()
+    }
+    
+    func clearSessions() {
+        recentSessions.removeAll()
+        UserDefaults.standard.removeObject(forKey: "recentSessions")
     }
     
     func setBaselineValues() {
@@ -402,10 +462,42 @@ class MenuHandler: NSObject, ObservableObject {
         super.init()
         
         setBaselineValues()
+        loadRecentSessions()
         startMonitoringNetwork()
     }
     
     deinit {
         stopPollingData()
+    }
+}
+
+extension Date {
+    func formattedForRecentSessions() -> String {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        if calendar.isDateInToday(self) {
+            return "Today, \(self.formatTime())"
+        } else if calendar.isDateInYesterday(self) {
+            return "Yesterday, \(self.formatTime())"
+        } else {
+            let currentYear = calendar.component(.year, from: now)
+            let thisDateYear = calendar.component(.year, from: self)
+            let dateFormatter = DateFormatter()
+            
+            if currentYear == thisDateYear {
+                dateFormatter.dateFormat = "MMMM d, HH:mm"
+            } else {
+                dateFormatter.dateFormat = "MMMM d, yyyy, HH:mm"
+            }
+            
+            return dateFormatter.string(from: self)
+        }
+    }
+
+    private func formatTime() -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "HH:mm"
+        return dateFormatter.string(from: self)
     }
 }
