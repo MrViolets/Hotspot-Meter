@@ -492,7 +492,7 @@ extension Date {
             return dateFormatter.string(from: self)
         }
     }
-
+    
     private func formatTime() -> String {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "HH:mm"

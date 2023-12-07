@@ -1,5 +1,5 @@
 //
-//  Bridging-Header.h
+//  HotspotMeter-Bridging-Header.h
 //  Hotspot Meter
 //
 //  Created by Sylvester Wilmott on 07/12/2023.
@@ -9,5 +9,6 @@
 #define Bridging_Header_h
 
 #include <ifaddrs.h>
+#include <net/if_dl.h>
 
 #endif /* Bridging_Header_h */
