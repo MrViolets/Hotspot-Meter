@@ -257,13 +257,11 @@ class MenuHandler: NSObject, ObservableObject {
                     
                     print("expensive connection detected")
                     
-                    if let lastDetection = self.lastExpensiveDetectionTime,
-                       Date().timeIntervalSince(lastDetection) > 3.5 {
+                    if self.lastExpensiveDetectionTime == nil || Date().timeIntervalSince(self.lastExpensiveDetectionTime!) > 3.5 {
                         if !self.allDataTextIsEmpty {
                             self.saveSession()
                         }
                         self.stopPollingData()
-                        self.setBaselineValues()
                     }
                     
                     self.lastExpensiveDetectionTime = Date()
