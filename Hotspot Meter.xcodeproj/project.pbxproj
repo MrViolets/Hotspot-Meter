@@ -20,7 +20,7 @@
 		C1A19BCD2B0F55F000FA060D /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		C1A19BCF2B0F55F000FA060D /* Hotspot_Meter.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Hotspot_Meter.entitlements; sourceTree = "<group>"; };
 		C1A19BD62B0F617300FA060D /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
-		C1BC52272B214F38006551E3 /* HotspotMeter-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "HotspotMeter-Bridging-Header.h"; sourceTree = "<group>"; };
+		C1BC52272B214F38006551E3 /* Hotspot_Meter_Bridging_Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Hotspot_Meter_Bridging_Header.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -55,7 +55,7 @@
 		C1A19BC52B0F55F000FA060D /* Hotspot Meter */ = {
 			isa = PBXGroup;
 			children = (
-				C1BC52272B214F38006551E3 /* HotspotMeter-Bridging-Header.h */,
+				C1BC52272B214F38006551E3 /* Hotspot_Meter_Bridging_Header.h */,
 				C1A19BC62B0F55F000FA060D /* App.swift */,
 				C1A19BCA2B0F55F000FA060D /* Assets.xcassets */,
 				C1A19BCF2B0F55F000FA060D /* Hotspot_Meter.entitlements */,
@@ -302,7 +302,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "sylvesterwilmott.Hotspot-Meter";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_OBJC_BRIDGING_HEADER = "Hotspot Meter/HotspotMeter-Bridging-Header.h";
+				SWIFT_OBJC_BRIDGING_HEADER = "Hotspot Meter/Hotspot_Meter_Bridging_Header.h";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
@@ -334,7 +334,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "sylvesterwilmott.Hotspot-Meter";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_OBJC_BRIDGING_HEADER = "Hotspot Meter/HotspotMeter-Bridging-Header.h";
+				SWIFT_OBJC_BRIDGING_HEADER = "Hotspot Meter/Hotspot_Meter_Bridging_Header.h";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;

@@ -1,5 +1,5 @@
 //
-//  HotspotMeter-Bridging-Header.h
+//  Hotspot_Meter_Bridging_Header.h
 //  Hotspot Meter
 //
 //  Created by Sylvester Wilmott on 07/12/2023.
