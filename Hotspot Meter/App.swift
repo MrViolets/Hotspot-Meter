@@ -47,7 +47,9 @@ struct MenuBar: App {
                 Menu("Recent Sessions") {
                     ForEach(menuHandler.recentSessions.indices, id: \.self) { index in
                         let session = menuHandler.recentSessions[index]
-                        Menu("\(session.date.formattedForRecentSessions()), \(session.total)") {
+                        Menu("\(session.total)") {
+                            Text("\(session.date.formattedForRecentSessions())")
+                            Divider()
                             Text("All: \(session.total)")
                             Text("Sent: \(session.sent)")
                             Text("Received: \(session.received)")
@@ -471,31 +473,8 @@ class MenuHandler: NSObject, ObservableObject {
 
 extension Date {
     func formattedForRecentSessions() -> String {
-        let calendar = Calendar.current
-        let now = Date()
-        
-        if calendar.isDateInToday(self) {
-            return "Today, \(self.formatTime())"
-        } else if calendar.isDateInYesterday(self) {
-            return "Yesterday, \(self.formatTime())"
-        } else {
-            let currentYear = calendar.component(.year, from: now)
-            let thisDateYear = calendar.component(.year, from: self)
-            let dateFormatter = DateFormatter()
-            
-            if currentYear == thisDateYear {
-                dateFormatter.dateFormat = "MMMM d, HH:mm"
-            } else {
-                dateFormatter.dateFormat = "MMMM d, yyyy, HH:mm"
-            }
-            
-            return dateFormatter.string(from: self)
-        }
-    }
-    
-    private func formatTime() -> String {
         let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "HH:mm"
+        dateFormatter.dateFormat = "MMMM d yyyy, HH:mm"
         return dateFormatter.string(from: self)
     }
 }
