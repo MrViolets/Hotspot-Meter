@@ -47,12 +47,12 @@ struct MenuBar: App {
                 Menu("Recent Sessions") {
                     ForEach(menuHandler.recentSessions.indices, id: \.self) { index in
                         let session = menuHandler.recentSessions[index]
-                        Menu("\(session.total)") {
+                        Menu("\(session.total.formattedDataString())") {
                             Text("\(session.date.formattedForRecentSessions())")
                             Divider()
-                            Text("All: \(session.total)")
-                            Text("Sent: \(session.sent)")
-                            Text("Received: \(session.received)")
+                            Text("All: \(session.total.formattedDataString())")
+                            Text("Sent: \(session.sent.formattedDataString())")
+                            Text("Received: \(session.received.formattedDataString())")
                         }
                     }
                     Divider()
@@ -267,7 +267,7 @@ class MenuHandler: NSObject, ObservableObject {
         )
         
         recentSessions.insert(session, at: 0)
-        if recentSessions.count > 6 {
+        if recentSessions.count > 10 {
             recentSessions.removeLast()
         }
         
