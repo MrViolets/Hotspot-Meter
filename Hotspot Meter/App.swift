@@ -20,12 +20,12 @@ struct MenuBar: App {
     @StateObject private var menuHandler = MenuHandler()
     
     init() {
-        let defaultTotalData = TotalData(sent: 0, received: 0, total: 0)
-        let defaultTotalDataEncoded = try? JSONEncoder().encode(defaultTotalData)
+        let defaultDataStruct = DataStruct(sent: 0, received: 0, total: 0)
+        let defaultDataStructEncoded = try? JSONEncoder().encode(defaultDataStruct)
         
         UserDefaults.standard.register(defaults: [
             Keys.displayMode: DisplayMode.combined.rawValue,
-            Keys.allTimeDataRecord: defaultTotalDataEncoded ?? Data()
+            Keys.allTimeDataRecord: defaultDataStructEncoded ?? Data()
         ])
     }
     
@@ -76,10 +76,8 @@ struct MenuBar: App {
             case .combined:
                 HStack {
                     Image(systemName: "arrow.up.arrow.down")
-                    if !menuHandler.allDataText.isEmpty {
-                        Text(menuHandler.allDataText)
-                            .font(.system(.body, design: .monospaced))
-                        Text(menuHandler.allDataText)
+                    if menuHandler.currentData.total != 0 {
+                        Text(menuHandler.currentData.total.formattedDataString())
                             .font(.system(.body, design: .monospaced))
                     }
                 }
@@ -87,8 +85,8 @@ struct MenuBar: App {
             case .onlyReceived:
                 HStack {
                     Image(systemName: "arrow.down")
-                    if !menuHandler.downloadedText.isEmpty {
-                        Text(menuHandler.downloadedText)
+                    if menuHandler.currentData.received != 0 {
+                        Text(menuHandler.currentData.received.formattedDataString())
                             .font(.system(.body, design: .monospaced))
                     }
                 }
@@ -96,8 +94,8 @@ struct MenuBar: App {
             case .onlySent:
                 HStack {
                     Image(systemName: "arrow.up")
-                    if !menuHandler.uploadedText.isEmpty {
-                        Text(menuHandler.uploadedText)
+                    if menuHandler.currentData.sent != 0 {
+                        Text(menuHandler.currentData.sent.formattedDataString())
                             .font(.system(.body, design: .monospaced))
                     }
                 }
@@ -138,7 +136,7 @@ struct DataUsageInfo {
     }
 }
 
-struct TotalData: Codable {
+struct DataStruct: Codable {
     var sent: UInt64
     var received: UInt64
     var total: UInt64
@@ -146,9 +144,9 @@ struct TotalData: Codable {
 
 struct SessionData: Codable {
     let date: Date
-    let sent: String
-    let received: String
-    let total: String
+    let sent: UInt64
+    let received: UInt64
+    let total: UInt64
 }
 
 class MenuHandler: NSObject, ObservableObject {
@@ -156,17 +154,15 @@ class MenuHandler: NSObject, ObservableObject {
         case expensive, cheap
     }
     
-    @Published var allTimeData = TotalData(sent: 0, received: 0, total: 0)
+    @Published var allTimeData = DataStruct(sent: 0, received: 0, total: 0)
+    @Published var currentData = DataStruct(sent: 0, received: 0, total: 0)
+    
     @Published var recentSessions: [SessionData] = []
     
     private var lastDataUsage = DataUsageInfo()
     
     private var dataPollingTimer: Timer?
     private var lastExpensiveDetectionTime: Date?
-    
-    @Published var allDataText: String = ""
-    @Published var uploadedText: String = ""
-    @Published var downloadedText: String = ""
     
     @Published var isActive: Bool = false
     @Published var currentDisplayMode: DisplayMode {
@@ -196,9 +192,6 @@ class MenuHandler: NSObject, ObservableObject {
     let monitor = NWPathMonitor()
     var stopPollingTimer: Timer?
     var currentState: NetworkState?
-    var allDataTextIsEmpty: Bool {
-        return uploadedText.isEmpty && downloadedText.isEmpty && allDataText.isEmpty
-    }
     
     func startMonitoringNetwork() {
         monitor.pathUpdateHandler = { [weak self] path in
@@ -212,7 +205,7 @@ class MenuHandler: NSObject, ObservableObject {
                     print("expensive connection detected")
                     
                     if self.lastExpensiveDetectionTime == nil || Date().timeIntervalSince(self.lastExpensiveDetectionTime!) > 3.5 {
-                        if !self.allDataTextIsEmpty {
+                        if self.currentData.total != 0 {
                             self.saveSession()
                         }
                         self.stopPollingData()
@@ -268,9 +261,9 @@ class MenuHandler: NSObject, ObservableObject {
         print("Saving session")
         let session = SessionData(
             date: Date(),
-            sent: uploadedText,
-            received: downloadedText,
-            total: allDataText
+            sent: currentData.sent,
+            received: currentData.received,
+            total: currentData.total
         )
         
         recentSessions.insert(session, at: 0)
@@ -328,10 +321,11 @@ class MenuHandler: NSObject, ObservableObject {
         
         lastDataUsage = currentDataUsage
         
-        allDataText = currentDataUsage.wifiComplete.formattedDataString()
-        uploadedText = currentDataUsage.wifiSent.formattedDataString()
-        downloadedText = currentDataUsage.wifiReceived.formattedDataString()
-        print("Total: \(allDataText), Sent: \(uploadedText), Received: \(downloadedText)")
+        currentData.total = currentDataUsage.wifiComplete
+        currentData.received = currentDataUsage.wifiSent
+        currentData.sent = currentDataUsage.wifiReceived
+        
+        print("Total: \(currentData.total), Sent: \(currentData.sent), Received: \(currentData.received)")
     }
     
     
@@ -342,7 +336,7 @@ class MenuHandler: NSObject, ObservableObject {
     }
     
     func resetAllTimeData() {
-        allTimeData = TotalData(sent: 0, received: 0, total: 0)
+        allTimeData = DataStruct(sent: 0, received: 0, total: 0)
         saveAllTimeData()
     }
     
@@ -388,9 +382,7 @@ class MenuHandler: NSObject, ObservableObject {
         wifiReceivedRollovers = 0
         wifiSentRollovers = 0
         setBaselineValues()
-        allDataText = ""
-        uploadedText = ""
-        downloadedText = ""
+        currentData = DataStruct(sent: 0, received: 0, total: 0)
         lastDataUsage = currentDataUsage
     }
     
@@ -405,10 +397,10 @@ class MenuHandler: NSObject, ObservableObject {
         }
         
         if let data = UserDefaults.standard.data(forKey: Keys.allTimeDataRecord),
-           let allTimeRecord = try? JSONDecoder().decode(TotalData.self, from: data) {
+           let allTimeRecord = try? JSONDecoder().decode(DataStruct.self, from: data) {
             self.allTimeData = allTimeRecord
         } else {
-            self.allTimeData = TotalData(sent: 0, received: 0, total: 0)
+            self.allTimeData = DataStruct(sent: 0, received: 0, total: 0)
         }
         
         super.init()
