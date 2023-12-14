@@ -34,7 +34,7 @@ struct MenuBar: App {
             Text("Total Usage")
                 .font(.system(.body, weight: .medium))
             Menu {
-                Text("All: \(menuHandler.allTimeData.total.formattedDataString())")
+                Text("Total: \(menuHandler.allTimeData.total.formattedDataString())")
                 Text("Sent: \(menuHandler.allTimeData.sent.formattedDataString())")
                 Text("Received: \(menuHandler.allTimeData.received.formattedDataString())")
                 Divider()
@@ -47,12 +47,14 @@ struct MenuBar: App {
                 Menu("Recent Sessions") {
                     ForEach(menuHandler.recentSessions.indices, id: \.self) { index in
                         let session = menuHandler.recentSessions[index]
-                        Menu("\(session.total.formattedDataString())") {
+                        Menu {
                             Text("\(session.date.formattedForRecentSessions())")
                             Divider()
-                            Text("All: \(session.total.formattedDataString())")
+                            Text("Total: \(session.total.formattedDataString())")
                             Text("Sent: \(session.sent.formattedDataString())")
                             Text("Received: \(session.received.formattedDataString())")
+                        } label: {
+                            Text("\(session.total.formattedDataString())")
                         }
                     }
                     Divider()
@@ -76,27 +78,33 @@ struct MenuBar: App {
             case .combined:
                 HStack {
                     Image(systemName: "arrow.up.arrow.down")
-                    if menuHandler.currentData.total != 0 {
+                    if menuHandler.isActive {
                         Text(menuHandler.currentData.total.formattedDataString())
-                            .font(.system(.body, design: .monospaced))
+                    }
+                }
+                
+            case .split:
+                HStack {
+                    if !menuHandler.isActive {
+                        Image(systemName: "arrow.up.arrow.down")
+                    } else {
+                        Text("↑ \(menuHandler.currentData.sent.formattedDataString())  ↓ \(menuHandler.currentData.received.formattedDataString())")
                     }
                 }
                 
             case .onlyReceived:
                 HStack {
                     Image(systemName: "arrow.down")
-                    if menuHandler.currentData.received != 0 {
+                    if menuHandler.isActive {
                         Text(menuHandler.currentData.received.formattedDataString())
-                            .font(.system(.body, design: .monospaced))
                     }
                 }
                 
             case .onlySent:
                 HStack {
                     Image(systemName: "arrow.up")
-                    if menuHandler.currentData.sent != 0 {
+                    if menuHandler.isActive {
                         Text(menuHandler.currentData.sent.formattedDataString())
-                            .font(.system(.body, design: .monospaced))
                     }
                 }
             }
@@ -105,9 +113,10 @@ struct MenuBar: App {
 }
 
 enum DisplayMode: String, CaseIterable {
-    case combined = "All Data"
-    case onlySent = "Data Sent"
-    case onlyReceived = "Data Received"
+    case combined = "Combined"
+    case split = "Split"
+    case onlySent = "Sent"
+    case onlyReceived = "Received"
 }
 
 extension UInt64 {
