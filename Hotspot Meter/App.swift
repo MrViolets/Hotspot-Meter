@@ -331,12 +331,11 @@ class MenuHandler: NSObject, ObservableObject {
         lastDataUsage = currentDataUsage
         
         currentData.total = currentDataUsage.wifiComplete
-        currentData.received = currentDataUsage.wifiSent
-        currentData.sent = currentDataUsage.wifiReceived
+        currentData.received = currentDataUsage.wifiReceived
+        currentData.sent = currentDataUsage.wifiSent
         
         print("Total: \(currentData.total), Sent: \(currentData.sent), Received: \(currentData.received)")
     }
-    
     
     private func saveAllTimeData() {
         if let data = try? JSONEncoder().encode(allTimeData) {
