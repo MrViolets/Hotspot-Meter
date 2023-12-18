@@ -287,7 +287,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Hotspot Meter/Hotspot_Meter.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_ASSET_PATHS = "\"Hotspot Meter/Preview Content\"";
 				DEVELOPMENT_TEAM = 256TNG57BA;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -302,7 +302,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.7;
+				MARKETING_VERSION = 1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = "sylvesterwilmott.Hotspot-Meter";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -319,7 +319,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Hotspot Meter/Hotspot_Meter.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_ASSET_PATHS = "\"Hotspot Meter/Preview Content\"";
 				DEVELOPMENT_TEAM = 256TNG57BA;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -334,7 +334,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.7;
+				MARKETING_VERSION = 1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = "sylvesterwilmott.Hotspot-Meter";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
