@@ -314,12 +314,12 @@ class MenuHandler: NSObject, ObservableObject {
         dataPollingTimer = nil
     }
     
-    var baselineWifiReceived: UInt64 = 0
-    var baselineWifiSent: UInt64 = 0
-    var previousWifiReceived: UInt64 = 0
-    var previousWifiSent: UInt64 = 0
-    var wifiReceivedRollovers: UInt64 = 0
-    var wifiSentRollovers: UInt64 = 0
+    private var baselineWifiReceived: UInt64 = 0
+    private var baselineWifiSent: UInt64 = 0
+    private var previousWifiReceived: UInt64 = 0
+    private var previousWifiSent: UInt64 = 0
+    private var wifiReceivedRollovers: UInt64 = 0
+    private var wifiSentRollovers: UInt64 = 0
     
     func printNetworkUsage() {
         let currentDataUsage = getDataUsageSinceBaseline()
@@ -353,7 +353,6 @@ class MenuHandler: NSObject, ObservableObject {
         
         print("Total: \(currentData.total), Sent: \(currentData.sent), Received: \(currentData.received)")
     }
-    
     
     private func saveAllTimeData() {
         if let data = try? JSONEncoder().encode(allTimeData) {
