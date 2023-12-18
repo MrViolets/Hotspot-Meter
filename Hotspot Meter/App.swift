@@ -31,34 +31,36 @@ struct MenuBar: App {
     
     var body: some Scene {
         MenuBarExtra {
-            Text("Total Usage")
-                .font(.system(.body, weight: .medium))
-            Menu {
-                Text("Total: \(menuHandler.allTimeData.total.formattedDataString())")
-                Text("Sent: \(menuHandler.allTimeData.sent.formattedDataString())")
-                Text("Received: \(menuHandler.allTimeData.received.formattedDataString())")
-                Divider()
-                Button("Reset", action: menuHandler.resetAllTimeData)
-            } label: {
-                Text("\(menuHandler.allTimeData.total.formattedDataString())")
+            Section(header: Text("All-Time Usage")) {
+                Menu("\(menuHandler.allTimeData.total.formattedDataString())") {
+                    Text("Total: \(menuHandler.allTimeData.total.formattedDataString())")
+                    Text("Sent: \(menuHandler.allTimeData.sent.formattedDataString())")
+                    Text("Received: \(menuHandler.allTimeData.received.formattedDataString())")
+                    Divider()
+                    Button("Reset", action: menuHandler.resetAllTimeData)
+                }
             }
-            if !menuHandler.recentSessions.isEmpty {
-                Divider()
-                Menu("Recent Sessions") {
-                    ForEach(menuHandler.recentSessions.indices, id: \.self) { index in
-                        let session = menuHandler.recentSessions[index]
-                        Menu {
-                            Text("\(session.date.formattedForRecentSessions())")
-                            Divider()
-                            Text("Total: \(session.total.formattedDataString())")
-                            Text("Sent: \(session.sent.formattedDataString())")
-                            Text("Received: \(session.received.formattedDataString())")
-                        } label: {
-                            Text("\(session.total.formattedDataString())")
+            Menu("History") {
+                if menuHandler.groupedMonthlyData.isEmpty {
+                    Text("No Data")
+                } else {
+                    ForEach(menuHandler.groupedMonthlyData.keys.sorted(by: >), id: \.self) { year in
+                        let monthsData = menuHandler.groupedMonthlyData[year]?.sorted { $0.month > $1.month }
+                        Section(header: Text("\(String(year))")) {
+                            ForEach(monthsData ?? [], id: \.self) { monthlyData in
+                                let formattedMonthYear = "\(monthName(from: monthlyData.month))"
+                                Menu(formattedMonthYear) {
+                                    Text("Total: \(monthlyData.total.formattedDataString())")
+                                    Text("Sent: \(monthlyData.sent.formattedDataString())")
+                                    Text("Received: \(monthlyData.received.formattedDataString())")
+                                }
+                            }
                         }
                     }
                     Divider()
-                    Button("Clear", action: menuHandler.clearSessions)
+                    Button("Clear History") {
+                        menuHandler.clearAllMonthlyData()
+                    }
                 }
             }
             Divider()
@@ -88,7 +90,7 @@ struct MenuBar: App {
                     if !menuHandler.isActive {
                         Image(systemName: "arrow.up.arrow.down")
                     } else {
-                        Text("↑ \(menuHandler.currentData.sent.formattedDataString())  ↓ \(menuHandler.currentData.received.formattedDataString())")
+                        Text("↑ \(menuHandler.currentData.sent.formattedDataString())   ↓ \(menuHandler.currentData.received.formattedDataString())")
                     }
                 }
                 
@@ -151,11 +153,21 @@ struct DataStruct: Codable {
     var total: UInt64
 }
 
-struct SessionData: Codable {
-    let date: Date
-    let sent: UInt64
-    let received: UInt64
-    let total: UInt64
+struct MonthlyData: Codable, Hashable {
+    var year: Int
+    var month: Int
+    var sent: UInt64
+    var received: UInt64
+    var total: UInt64
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(year)
+        hasher.combine(month)
+    }
+    
+    static func == (lhs: MonthlyData, rhs: MonthlyData) -> Bool {
+        return lhs.year == rhs.year && lhs.month == rhs.month
+    }
 }
 
 class MenuHandler: NSObject, ObservableObject {
@@ -166,7 +178,10 @@ class MenuHandler: NSObject, ObservableObject {
     @Published var allTimeData = DataStruct(sent: 0, received: 0, total: 0)
     @Published var currentData = DataStruct(sent: 0, received: 0, total: 0)
     
-    @Published var recentSessions: [SessionData] = []
+    @Published var monthlyDataList: [MonthlyData] = []
+    var groupedMonthlyData: [Int: [MonthlyData]] {
+        Dictionary(grouping: monthlyDataList) { $0.year }
+    }
     
     private var lastDataUsage = DataUsageInfo()
     
@@ -267,29 +282,31 @@ class MenuHandler: NSObject, ObservableObject {
     }
     
     func saveSession() {
-        print("Saving session")
-        let session = SessionData(
-            date: Date(),
-            sent: currentData.sent,
-            received: currentData.received,
-            total: currentData.total
-        )
+        let calendar = Calendar.current
+        let now = Date()
+        let year = calendar.component(.year, from: now)
+        let month = calendar.component(.month, from: now)
         
-        recentSessions.insert(session, at: 0)
-        if recentSessions.count > 10 {
-            recentSessions.removeLast()
-        }
+        var monthlyData = loadMonthlyData(forYear: year, andMonth: month) ?? MonthlyData(year: year, month: month, sent: 0, received: 0, total: 0)
         
-        if let data = try? JSONEncoder().encode(recentSessions) {
-            UserDefaults.standard.set(data, forKey: "recentSessions")
-        }
+        monthlyData.sent += currentData.sent
+        monthlyData.received += currentData.received
+        monthlyData.total += currentData.total
+        
+        saveMonthlyData(monthlyData)
+        loadAllMonthlyData()
     }
     
-    private func loadRecentSessions() {
-        if let data = UserDefaults.standard.data(forKey: "recentSessions"),
-           let sessions = try? JSONDecoder().decode([SessionData].self, from: data) {
-            self.recentSessions = sessions
+    private func loadMonthlyData(forYear year: Int, andMonth month: Int) -> MonthlyData? {
+        let userDefaults = UserDefaults.standard
+        let key = "monthlyData-\(year)-\(month)"
+        
+        guard let data = userDefaults.data(forKey: key) else {
+            return nil
         }
+        
+        let decoder = JSONDecoder()
+        return try? decoder.decode(MonthlyData.self, from: data)
     }
     
     func invalidatePollingTimer() {
@@ -331,11 +348,12 @@ class MenuHandler: NSObject, ObservableObject {
         lastDataUsage = currentDataUsage
         
         currentData.total = currentDataUsage.wifiComplete
-        currentData.received = currentDataUsage.wifiReceived
         currentData.sent = currentDataUsage.wifiSent
+        currentData.received = currentDataUsage.wifiReceived
         
         print("Total: \(currentData.total), Sent: \(currentData.sent), Received: \(currentData.received)")
     }
+    
     
     private func saveAllTimeData() {
         if let data = try? JSONEncoder().encode(allTimeData) {
@@ -346,11 +364,6 @@ class MenuHandler: NSObject, ObservableObject {
     func resetAllTimeData() {
         allTimeData = DataStruct(sent: 0, received: 0, total: 0)
         saveAllTimeData()
-    }
-    
-    func clearSessions() {
-        recentSessions.removeAll()
-        UserDefaults.standard.removeObject(forKey: "recentSessions")
     }
     
     func setBaselineValues() {
@@ -394,6 +407,57 @@ class MenuHandler: NSObject, ObservableObject {
         lastDataUsage = currentDataUsage
     }
     
+    private func loadAllMonthlyData() {
+        let userDefaults = UserDefaults.standard
+        let decoder = JSONDecoder()
+        
+        if let monthlyDataKeys = userDefaults.array(forKey: "monthlyDataKeys") as? [String] {
+            self.monthlyDataList = monthlyDataKeys.compactMap { key in
+                if let data = userDefaults.data(forKey: key),
+                   let monthlyData = try? decoder.decode(MonthlyData.self, from: data) {
+                    return monthlyData
+                }
+                return nil
+            }
+        }
+    }
+    
+    private func saveMonthlyData(_ monthlyData: MonthlyData) {
+        let userDefaults = UserDefaults.standard
+        let encoder = JSONEncoder()
+        
+        let key = "monthlyData-\(monthlyData.year)-\(monthlyData.month)"
+        if let encoded = try? encoder.encode(monthlyData) {
+            userDefaults.set(encoded, forKey: key)
+            
+            if !monthlyDataList.contains(where: { $0.year == monthlyData.year && $0.month == monthlyData.month }) {
+                monthlyDataList.append(monthlyData)
+            }
+            
+            monthlyDataList.sort { ($0.year, $0.month) > ($1.year, $1.month) }
+            if monthlyDataList.count > 12 {
+                monthlyDataList.removeSubrange(12...)
+            }
+            
+            let keys = monthlyDataList.map { "monthlyData-\($0.year)-\($0.month)" }
+            userDefaults.set(keys, forKey: "monthlyDataKeys")
+        }
+    }
+    
+    func clearAllMonthlyData() {
+        let userDefaults = UserDefaults.standard
+        
+        if let monthlyDataKeys = userDefaults.array(forKey: "monthlyDataKeys") as? [String] {
+            for key in monthlyDataKeys {
+                userDefaults.removeObject(forKey: key)
+            }
+        }
+        
+        userDefaults.set([], forKey: "monthlyDataKeys")
+        
+        monthlyDataList.removeAll()
+    }
+    
     override init() {
         self.isRunAtStartupEnabled = (SMAppService.mainApp.status == .enabled)
         
@@ -414,7 +478,7 @@ class MenuHandler: NSObject, ObservableObject {
         super.init()
         
         setBaselineValues()
-        loadRecentSessions()
+        loadAllMonthlyData()
         startMonitoringNetwork()
     }
     
@@ -429,4 +493,11 @@ extension Date {
         dateFormatter.dateFormat = "MMMM d yyyy, HH:mm"
         return dateFormatter.string(from: self)
     }
+}
+
+func monthName(from monthNumber: Int) -> String {
+    let dateFormatter = DateFormatter()
+    dateFormatter.dateFormat = "MMMM"
+    let date = Calendar.current.date(from: DateComponents(month: monthNumber))!
+    return dateFormatter.string(from: date)
 }
