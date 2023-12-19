@@ -31,45 +31,93 @@ struct MenuBar: App {
     
     var body: some Scene {
         MenuBarExtra {
-            Section(header: Text("All-Time Usage")) {
-                Menu("\(menuHandler.allTimeData.total.formattedDataString())") {
-                    Text("Total: \(menuHandler.allTimeData.total.formattedDataString())")
-                    Text("Sent: \(menuHandler.allTimeData.sent.formattedDataString())")
-                    Text("Received: \(menuHandler.allTimeData.received.formattedDataString())")
-                    Divider()
-                    Button("Reset", action: menuHandler.resetAllTimeData)
-                }
-            }
-            Menu("History") {
-                if menuHandler.groupedMonthlyData.isEmpty {
-                    Text("No Data")
-                } else {
-                    ForEach(menuHandler.groupedMonthlyData.keys.sorted(by: >), id: \.self) { year in
-                        let monthsData = menuHandler.groupedMonthlyData[year]?.sorted { $0.month > $1.month }
-                        Section(header: Text("\(String(year))")) {
-                            ForEach(monthsData ?? [], id: \.self) { monthlyData in
-                                let formattedMonthYear = "\(monthName(from: monthlyData.month))"
-                                Menu(formattedMonthYear) {
-                                    Text("Total: \(monthlyData.total.formattedDataString())")
-                                    Text("Sent: \(monthlyData.sent.formattedDataString())")
-                                    Text("Received: \(monthlyData.received.formattedDataString())")
-                                }
-                            }
-                        }
-                    }
-                    Divider()
-                    Button("Clear History") {
-                        menuHandler.clearAllMonthlyData()
-                    }
-                }
-            }
-            Divider()
             Picker("Counter Display", selection: $menuHandler.currentDisplayMode) {
                 ForEach(DisplayMode.allCases, id: \.self) { mode in
                     Text(mode.rawValue).tag(mode)
                 }
             }.pickerStyle(MenuPickerStyle())
-            Toggle("Start at Login", isOn: $menuHandler.isRunAtStartupEnabled)
+            Divider()
+            Menu {
+                Button {
+                    // No action
+                } label: {
+                    HStack {
+                        Text("\(menuHandler.allTimeData.total.formattedDataString())")
+                    }
+                }
+                .disabled(true)
+                Divider()
+                Button {
+                    // No action
+                } label: {
+                    HStack {
+                        Image(systemName: "arrow.up")
+                        Text(menuHandler.allTimeData.sent.formattedDataString())
+                    }
+                }
+                .disabled(true)
+                Button {
+                    // No action
+                } label: {
+                    HStack {
+                        Image(systemName: "arrow.down")
+                        Text(menuHandler.allTimeData.received.formattedDataString())
+                    }
+                }
+                .disabled(true)
+                Divider()
+                Button("Reset", action: menuHandler.resetAllTimeData)
+            } label: {
+                Text("All-Time Data Usage")
+            }
+            Menu("Data Usage by Month") {
+                if menuHandler.groupedMonthlyData.isEmpty {
+                    Text("No Data")
+                } else {
+                    ForEach(menuHandler.groupedMonthlyData.keys.sorted(by: >), id: \.self) { year in
+                        let monthsData = menuHandler.groupedMonthlyData[year]?.sorted { $0.month > $1.month }
+                        Section(header: Text(String(year))) {
+                            ForEach(monthsData ?? [], id: \.self) { monthlyData in
+                                let formattedMonthYear = monthName(from: monthlyData.month)
+                                Menu {
+                                    Button {
+                                    } label: {
+                                        HStack {
+                                            Text(monthlyData.total.formattedDataString())
+                                        }
+                                    }
+                                    .disabled(true)
+                                    Divider()
+                                    Button {
+                                    } label: {
+                                        HStack {
+                                            Image(systemName: "arrow.up")
+                                            Text(monthlyData.sent.formattedDataString())
+                                        }
+                                    }
+                                    .disabled(true)
+                                    Button {
+                                    } label: {
+                                        HStack {
+                                            Image(systemName: "arrow.down")
+                                            Text(monthlyData.received.formattedDataString())
+                                        }
+                                    }
+                                    .disabled(true)
+                                } label: {
+                                    Text(formattedMonthYear)
+                                }
+                            }
+                        }
+                    }
+                    Divider()
+                    Button("Clear") {
+                        menuHandler.clearAllMonthlyData()
+                    }
+                }
+            }
+            Divider()
+            Toggle("Launch at Login", isOn: $menuHandler.isRunAtStartupEnabled)
             Divider()
             Button("Quit") {
                 NSApp.terminate(self)
