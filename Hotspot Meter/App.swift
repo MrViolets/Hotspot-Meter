@@ -18,17 +18,7 @@ public enum Keys {
 @main
 struct MenuBar: App {
     @StateObject private var menuHandler = MenuHandler()
-    
-    init() {
-        let defaultDataStruct = DataStruct(sent: 0, received: 0, total: 0)
-        let defaultDataStructEncoded = try? JSONEncoder().encode(defaultDataStruct)
-        
-        UserDefaults.standard.register(defaults: [
-            Keys.displayMode: DisplayMode.combined.rawValue,
-            Keys.allTimeDataRecord: defaultDataStructEncoded ?? Data()
-        ])
-    }
-    
+
     var body: some Scene {
         MenuBarExtra {
             Picker("Counter Display", selection: $menuHandler.currentDisplayMode) {
@@ -36,44 +26,49 @@ struct MenuBar: App {
                     Text(mode.rawValue).tag(mode)
                 }
             }.pickerStyle(MenuPickerStyle())
+
             Divider()
-            Menu {
-                Button {
-                    // No action
-                } label: {
-                    HStack {
-                        Text("\(menuHandler.allTimeData.total.formattedDataString())")
+
+            if menuHandler.allTimeData.total > 0 {
+                Menu {
+                    Button {
+                        // No action
+                    } label: {
+                        HStack {
+                            Text("\(menuHandler.allTimeData.total.formattedDataString())")
+                        }
                     }
-                }
-                .disabled(true)
-                Divider()
-                Button {
-                    // No action
-                } label: {
-                    HStack {
-                        Image(systemName: "arrow.up")
-                        Text(menuHandler.allTimeData.sent.formattedDataString())
+                    .disabled(true)
+                    Divider()
+                    Button {
+                        // No action
+                    } label: {
+                        HStack {
+                            Image(systemName: "arrow.up")
+                            Text(menuHandler.allTimeData.sent.formattedDataString())
+                        }
                     }
-                }
-                .disabled(true)
-                Button {
-                    // No action
-                } label: {
-                    HStack {
-                        Image(systemName: "arrow.down")
-                        Text(menuHandler.allTimeData.received.formattedDataString())
+                    .disabled(true)
+                    Button {
+                        // No action
+                    } label: {
+                        HStack {
+                            Image(systemName: "arrow.down")
+                            Text(menuHandler.allTimeData.received.formattedDataString())
+                        }
                     }
+                    .disabled(true)
+                    Divider()
+                    Button("Clear", action: menuHandler.resetAllTimeData)
+                } label: {
+                    Text("All-Time Data Usage")
                 }
-                .disabled(true)
-                Divider()
-                Button("Reset", action: menuHandler.resetAllTimeData)
-            } label: {
-                Text("All-Time Data Usage")
+            } else {
+                Text("All-Time Data Usage").disabled(true)
             }
-            Menu("Data Usage by Month") {
-                if menuHandler.groupedMonthlyData.isEmpty {
-                    Text("No Data")
-                } else {
+
+            if !menuHandler.groupedMonthlyData.isEmpty {
+                Menu {
                     ForEach(menuHandler.groupedMonthlyData.keys.sorted(by: >), id: \.self) { year in
                         let monthsData = menuHandler.groupedMonthlyData[year]?.sorted { $0.month > $1.month }
                         Section(header: Text(String(year))) {
@@ -81,6 +76,7 @@ struct MenuBar: App {
                                 let formattedMonthYear = monthName(from: monthlyData.month)
                                 Menu {
                                     Button {
+                                        // No action
                                     } label: {
                                         HStack {
                                             Text(monthlyData.total.formattedDataString())
@@ -89,6 +85,7 @@ struct MenuBar: App {
                                     .disabled(true)
                                     Divider()
                                     Button {
+                                        // No action
                                     } label: {
                                         HStack {
                                             Image(systemName: "arrow.up")
@@ -97,6 +94,7 @@ struct MenuBar: App {
                                     }
                                     .disabled(true)
                                     Button {
+                                        // No action
                                     } label: {
                                         HStack {
                                             Image(systemName: "arrow.down")
@@ -114,15 +112,22 @@ struct MenuBar: App {
                     Button("Clear") {
                         menuHandler.clearAllMonthlyData()
                     }
+                } label: {
+                    Text("Data Usage by Month")
                 }
+            } else {
+                Text("Data Usage by Month").disabled(true)
             }
+
             Divider()
+
             Toggle("Launch at Login", isOn: $menuHandler.isRunAtStartupEnabled)
+
             Divider()
+
             Button("Quit") {
                 NSApp.terminate(self)
             }.keyboardShortcut("q")
-            
         } label: {
             switch menuHandler.currentDisplayMode {
             case .combined:
@@ -132,7 +137,7 @@ struct MenuBar: App {
                         Text(menuHandler.currentData.total.formattedDataString())
                     }
                 }
-                
+
             case .split:
                 HStack {
                     if !menuHandler.isActive {
@@ -141,7 +146,7 @@ struct MenuBar: App {
                         Text("↑ \(menuHandler.currentData.sent.formattedDataString())   ↓ \(menuHandler.currentData.received.formattedDataString())")
                     }
                 }
-                
+
             case .onlyReceived:
                 HStack {
                     Image(systemName: "arrow.down")
@@ -149,7 +154,7 @@ struct MenuBar: App {
                         Text(menuHandler.currentData.received.formattedDataString())
                     }
                 }
-                
+
             case .onlySent:
                 HStack {
                     Image(systemName: "arrow.up")
@@ -161,6 +166,7 @@ struct MenuBar: App {
         }
     }
 }
+
 
 enum DisplayMode: String, CaseIterable {
     case combined = "Combined"
@@ -277,9 +283,6 @@ class MenuHandler: NSObject, ObservableObject {
                     print("expensive connection detected")
                     
                     if self.lastExpensiveDetectionTime == nil || Date().timeIntervalSince(self.lastExpensiveDetectionTime!) > 3.5 {
-                        if self.currentData.total != 0 {
-                            self.saveSession()
-                        }
                         self.stopPollingData()
                     }
                     
@@ -300,13 +303,13 @@ class MenuHandler: NSObject, ObservableObject {
                     guard self.currentState != .cheap else { return }
                     
                     print("cheap connection detected")
-                    self.saveSession()
                     self.stopPollingData()
                     
                     self.currentState = .cheap
                 }
             }
         }
+        
         let queue = DispatchQueue(label: "NetworkMonitor")
         monitor.start(queue: queue)
     }
@@ -327,22 +330,6 @@ class MenuHandler: NSObject, ObservableObject {
         resetDataUsageCounters()
         
         isActive = false
-    }
-    
-    func saveSession() {
-        let calendar = Calendar.current
-        let now = Date()
-        let year = calendar.component(.year, from: now)
-        let month = calendar.component(.month, from: now)
-        
-        var monthlyData = loadMonthlyData(forYear: year, andMonth: month) ?? MonthlyData(year: year, month: month, sent: 0, received: 0, total: 0)
-        
-        monthlyData.sent += currentData.sent
-        monthlyData.received += currentData.received
-        monthlyData.total += currentData.total
-        
-        saveMonthlyData(monthlyData)
-        loadAllMonthlyData()
     }
     
     private func loadMonthlyData(forYear year: Int, andMonth month: Int) -> MonthlyData? {
@@ -393,13 +380,31 @@ class MenuHandler: NSObject, ObservableObject {
         
         saveAllTimeData()
         
+        let now = Date()
+        let calendar = Calendar.current
+        let year = calendar.component(.year, from: now)
+        let month = calendar.component(.month, from: now)
+        updateMonthlyData(year: year, month: month, sent: deltaSent, received: deltaReceived)
+        
         lastDataUsage = currentDataUsage
         
         currentData.total = currentDataUsage.wifiComplete
         currentData.sent = currentDataUsage.wifiSent
         currentData.received = currentDataUsage.wifiReceived
+        currentData.received = currentDataUsage.wifiReceived
         
         print("Total: \(currentData.total), Sent: \(currentData.sent), Received: \(currentData.received)")
+    }
+    
+    private func updateMonthlyData(year: Int, month: Int, sent: UInt64, received: UInt64) {
+        var monthlyData = loadMonthlyData(forYear: year, andMonth: month) ?? MonthlyData(year: year, month: month, sent: 0, received: 0, total: 0)
+        
+        monthlyData.sent += sent
+        monthlyData.received += received
+        monthlyData.total += (sent + received)
+        
+        saveMonthlyData(monthlyData)
+        loadAllMonthlyData()
     }
     
     private func saveAllTimeData() {
