@@ -12,6 +12,7 @@ import ServiceManagement
 
 public enum Keys {
     static let displayMode = "displayMode"
+    static let counterType = "counterType"
     static let allTimeDataRecord = "allTimeDataRecord"
 }
 
@@ -21,20 +22,21 @@ struct MenuBar: App {
     
     var body: some Scene {
         MenuBarExtra {
-            Picker("Counter", selection: $menuHandler.currentDisplayMode) {
-                Section(header: Text("Session")) {
+            Menu("Counter") {
+                Picker("Type", selection: $menuHandler.currentType) {
+                    Text("Session").tag(CounterType.session)
+                    Text("Accumulative").tag(CounterType.accumulative)
+                }
+                .pickerStyle(InlinePickerStyle())
+                
+                Picker("Display", selection: $menuHandler.currentDisplayMode) {
                     Text("Combined").tag(DisplayMode.combined)
                     Text("Split").tag(DisplayMode.split)
-                    Text("Sent").tag(DisplayMode.onlySent)
-                    Text("Received").tag(DisplayMode.onlyReceived)
+                    Text("Sent").tag(DisplayMode.sent)
+                    Text("Received").tag(DisplayMode.received)
                 }
-                Section(header: Text("Accumulative")) {
-                    Text("Combined").tag(DisplayMode.allCombined)
-                    Text("Split").tag(DisplayMode.allSplit)
-                    Text("Sent").tag(DisplayMode.allOnlySent)
-                    Text("Received").tag(DisplayMode.allOnlyReceived)
-                }
-            }.pickerStyle(MenuPickerStyle())
+                .pickerStyle(InlinePickerStyle())
+            }
             
             Button("Reset Counters") {
                 menuHandler.resetDataUsageCounters()
@@ -52,70 +54,74 @@ struct MenuBar: App {
             }.keyboardShortcut("q")
         } label: {
             Group {
-                switch menuHandler.currentDisplayMode {
-                case .combined:
-                    HStack {
-                        Image(systemName: "arrow.up.arrow.down")
-                        if menuHandler.isActive {
-                            Text(menuHandler.currentData.total.formattedDataString())
-                        }
-                    }
-                    
-                case .allCombined:
-                    HStack {
-                        Image(systemName: "arrow.up.arrow.down")
-                        if menuHandler.allTimeData.total > 0 {
-                            Text(menuHandler.allTimeData.total.formattedDataString())
-                        }
-                    }
-                    
-                case .split:
-                    HStack {
-                        if !menuHandler.isActive {
+                if menuHandler.currentType == .session {
+                    switch menuHandler.currentDisplayMode {
+                    case .combined:
+                        HStack {
                             Image(systemName: "arrow.up.arrow.down")
-                        } else {
-                            Text("↑ \(menuHandler.currentData.sent.formattedDataString())   ↓ \(menuHandler.currentData.received.formattedDataString())")
+                            if menuHandler.isActive {
+                                Text(menuHandler.currentData.total.formattedDataString())
+                            }
+                        }
+                        
+                    case .split:
+                        HStack {
+                            if !menuHandler.isActive {
+                                Image(systemName: "arrow.up.arrow.down")
+                            } else {
+                                Text("↑ \(menuHandler.currentData.sent.formattedDataString()) ↓ \(menuHandler.currentData.received.formattedDataString())")
+                            }
+                        }
+                        
+                    case .sent:
+                        HStack {
+                            Image(systemName: "arrow.up")
+                            if menuHandler.isActive {
+                                Text(menuHandler.currentData.sent.formattedDataString())
+                            }
+                        }
+                        
+                    case .received:
+                        HStack {
+                            Image(systemName: "arrow.down")
+                            if menuHandler.isActive {
+                                Text(menuHandler.currentData.received.formattedDataString())
+                            }
                         }
                     }
-                    
-                case .allSplit:
-                    HStack {
-                        if menuHandler.allTimeData.total > 0 {
-                            Text("↑ \(menuHandler.allTimeData.sent.formattedDataString())   ↓ \(menuHandler.allTimeData.received.formattedDataString())")
-                        } else {
+                } else if menuHandler.currentType == .accumulative {
+                    switch menuHandler.currentDisplayMode {
+                    case .combined:
+                        HStack {
                             Image(systemName: "arrow.up.arrow.down")
+                            if menuHandler.allTimeData.total > 0 {
+                                Text(menuHandler.allTimeData.total.formattedDataString())
+                            }
                         }
-                    }
-                    
-                case .onlyReceived:
-                    HStack {
-                        Image(systemName: "arrow.down")
-                        if menuHandler.isActive {
-                            Text(menuHandler.currentData.received.formattedDataString())
+                        
+                    case .split:
+                        HStack {
+                            if menuHandler.allTimeData.total == 0 {
+                                Image(systemName: "arrow.up.arrow.down")
+                            } else {
+                                Text("↑ \(menuHandler.allTimeData.sent.formattedDataString()) ↓ \(menuHandler.allTimeData.received.formattedDataString())")
+                            }
                         }
-                    }
-                    
-                case .allOnlyReceived:
-                    HStack {
-                        Image(systemName: "arrow.down")
-                        if menuHandler.allTimeData.received > 0 {
-                            Text(menuHandler.allTimeData.received.formattedDataString())
+                        
+                    case .sent:
+                        HStack {
+                            Image(systemName: "arrow.up")
+                            if menuHandler.allTimeData.sent > 0 {
+                                Text(menuHandler.allTimeData.sent.formattedDataString())
+                            }
                         }
-                    }
-                    
-                case .onlySent:
-                    HStack {
-                        Image(systemName: "arrow.up")
-                        if menuHandler.isActive {
-                            Text(menuHandler.currentData.sent.formattedDataString())
-                        }
-                    }
-                    
-                case .allOnlySent:
-                    HStack {
-                        Image(systemName: "arrow.up")
-                        if menuHandler.allTimeData.received > 0 {
-                            Text(menuHandler.allTimeData.sent.formattedDataString())
+                        
+                    case .received:
+                        HStack {
+                            Image(systemName: "arrow.down")
+                            if menuHandler.allTimeData.received > 0 {
+                                Text(menuHandler.allTimeData.received.formattedDataString())
+                            }
                         }
                     }
                 }
@@ -125,15 +131,16 @@ struct MenuBar: App {
 }
 
 
-enum DisplayMode: String, CaseIterable {
-    case combined = "Combined"
-    case split = "Split"
-    case onlySent = "Sent"
-    case onlyReceived = "Received"
-    case allCombined = "AllCombined"
-    case allSplit = "AllSplit"
-    case allOnlySent = "AllSent"
-    case allOnlyReceived = "AllReceived"
+enum CounterType: String {
+    case session
+    case accumulative
+}
+
+enum DisplayMode: String {
+    case combined
+    case split
+    case sent
+    case received
 }
 
 extension UInt64 {
@@ -181,6 +188,12 @@ class MenuHandler: NSObject, ObservableObject {
     private var lastExpensiveDetectionTime: Date?
     
     @Published var isActive: Bool = false
+    @Published var currentType: CounterType {
+        didSet {
+            UserDefaults.standard.set(currentType.rawValue, forKey: Keys.counterType)
+        }
+    }
+    
     @Published var currentDisplayMode: DisplayMode {
         didSet {
             UserDefaults.standard.set(currentDisplayMode.rawValue, forKey: Keys.displayMode)
@@ -217,8 +230,6 @@ class MenuHandler: NSObject, ObservableObject {
                 switch path.isExpensive {
                 case true:
                     guard self.currentState != .expensive else { return }
-                    
-                    print("expensive connection detected")
                     
                     if self.lastExpensiveDetectionTime == nil || Date().timeIntervalSince(self.lastExpensiveDetectionTime!) > 3.5 {
                         self.stopPollingData()
@@ -368,6 +379,13 @@ class MenuHandler: NSObject, ObservableObject {
     
     override init() {
         self.isRunAtStartupEnabled = (SMAppService.mainApp.status == .enabled)
+        
+        if let savedCounterType = UserDefaults.standard.string(forKey: Keys.counterType),
+           let counterType = CounterType(rawValue: savedCounterType) {
+            self.currentType = counterType
+        } else {
+            self.currentType = .session
+        }
         
         if let savedDisplayMode = UserDefaults.standard.string(forKey: Keys.displayMode),
            let displayMode = DisplayMode(rawValue: savedDisplayMode) {
