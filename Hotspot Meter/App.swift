@@ -18,148 +18,105 @@ public enum Keys {
 @main
 struct MenuBar: App {
     @StateObject private var menuHandler = MenuHandler()
-
+    
     var body: some Scene {
         MenuBarExtra {
-            Picker("Counter Display", selection: $menuHandler.currentDisplayMode) {
-                ForEach(DisplayMode.allCases, id: \.self) { mode in
-                    Text(mode.rawValue).tag(mode)
+            Picker("Counter", selection: $menuHandler.currentDisplayMode) {
+                Section(header: Text("Session")) {
+                    Text("Combined").tag(DisplayMode.combined)
+                    Text("Split").tag(DisplayMode.split)
+                    Text("Sent").tag(DisplayMode.onlySent)
+                    Text("Received").tag(DisplayMode.onlyReceived)
+                }
+                Section(header: Text("Accumulative")) {
+                    Text("Combined").tag(DisplayMode.allCombined)
+                    Text("Split").tag(DisplayMode.allSplit)
+                    Text("Sent").tag(DisplayMode.allOnlySent)
+                    Text("Received").tag(DisplayMode.allOnlyReceived)
                 }
             }.pickerStyle(MenuPickerStyle())
-
-            Divider()
-
-            if menuHandler.allTimeData.total > 0 {
-                Menu {
-                    Button {
-                        // No action
-                    } label: {
-                        HStack {
-                            Text("\(menuHandler.allTimeData.total.formattedDataString())")
-                        }
-                    }
-                    .disabled(true)
-                    Divider()
-                    Button {
-                        // No action
-                    } label: {
-                        HStack {
-                            Image(systemName: "arrow.up")
-                            Text(menuHandler.allTimeData.sent.formattedDataString())
-                        }
-                    }
-                    .disabled(true)
-                    Button {
-                        // No action
-                    } label: {
-                        HStack {
-                            Image(systemName: "arrow.down")
-                            Text(menuHandler.allTimeData.received.formattedDataString())
-                        }
-                    }
-                    .disabled(true)
-                    Divider()
-                    Button("Clear", action: menuHandler.resetAllTimeData)
-                } label: {
-                    Text("All-Time Data Usage")
-                }
-            } else {
-                Text("All-Time Data Usage").disabled(true)
+            
+            Button("Reset Counters") {
+                menuHandler.resetDataUsageCounters()
+                menuHandler.resetAllTimeData()
             }
-
-            if !menuHandler.groupedMonthlyData.isEmpty {
-                Menu {
-                    ForEach(menuHandler.groupedMonthlyData.keys.sorted(by: >), id: \.self) { year in
-                        let monthsData = menuHandler.groupedMonthlyData[year]?.sorted { $0.month > $1.month }
-                        Section(header: Text(String(year))) {
-                            ForEach(monthsData ?? [], id: \.self) { monthlyData in
-                                let formattedMonthYear = monthName(from: monthlyData.month)
-                                Menu {
-                                    Button {
-                                        // No action
-                                    } label: {
-                                        HStack {
-                                            Text(monthlyData.total.formattedDataString())
-                                        }
-                                    }
-                                    .disabled(true)
-                                    Divider()
-                                    Button {
-                                        // No action
-                                    } label: {
-                                        HStack {
-                                            Image(systemName: "arrow.up")
-                                            Text(monthlyData.sent.formattedDataString())
-                                        }
-                                    }
-                                    .disabled(true)
-                                    Button {
-                                        // No action
-                                    } label: {
-                                        HStack {
-                                            Image(systemName: "arrow.down")
-                                            Text(monthlyData.received.formattedDataString())
-                                        }
-                                    }
-                                    .disabled(true)
-                                } label: {
-                                    Text(formattedMonthYear)
-                                }
-                            }
-                        }
-                    }
-                    Divider()
-                    Button("Clear") {
-                        menuHandler.clearAllMonthlyData()
-                    }
-                } label: {
-                    Text("Data Usage by Month")
-                }
-            } else {
-                Text("Data Usage by Month").disabled(true)
-            }
-
+            
             Divider()
-
+            
             Toggle("Launch at Login", isOn: $menuHandler.isRunAtStartupEnabled)
-
+            
             Divider()
-
+            
             Button("Quit") {
                 NSApp.terminate(self)
             }.keyboardShortcut("q")
         } label: {
-            switch menuHandler.currentDisplayMode {
-            case .combined:
-                HStack {
-                    Image(systemName: "arrow.up.arrow.down")
-                    if menuHandler.isActive {
-                        Text(menuHandler.currentData.total.formattedDataString())
-                    }
-                }
-
-            case .split:
-                HStack {
-                    if !menuHandler.isActive {
+            Group {
+                switch menuHandler.currentDisplayMode {
+                case .combined:
+                    HStack {
                         Image(systemName: "arrow.up.arrow.down")
-                    } else {
-                        Text("↑ \(menuHandler.currentData.sent.formattedDataString())   ↓ \(menuHandler.currentData.received.formattedDataString())")
+                        if menuHandler.isActive {
+                            Text(menuHandler.currentData.total.formattedDataString())
+                        }
                     }
-                }
-
-            case .onlyReceived:
-                HStack {
-                    Image(systemName: "arrow.down")
-                    if menuHandler.isActive {
-                        Text(menuHandler.currentData.received.formattedDataString())
+                    
+                case .allCombined:
+                    HStack {
+                        Image(systemName: "arrow.up.arrow.down")
+                        if menuHandler.allTimeData.total > 0 {
+                            Text(menuHandler.allTimeData.total.formattedDataString())
+                        }
                     }
-                }
-
-            case .onlySent:
-                HStack {
-                    Image(systemName: "arrow.up")
-                    if menuHandler.isActive {
-                        Text(menuHandler.currentData.sent.formattedDataString())
+                    
+                case .split:
+                    HStack {
+                        if !menuHandler.isActive {
+                            Image(systemName: "arrow.up.arrow.down")
+                        } else {
+                            Text("↑ \(menuHandler.currentData.sent.formattedDataString())   ↓ \(menuHandler.currentData.received.formattedDataString())")
+                        }
+                    }
+                    
+                case .allSplit:
+                    HStack {
+                        if menuHandler.allTimeData.total > 0 {
+                            Text("↑ \(menuHandler.allTimeData.sent.formattedDataString())   ↓ \(menuHandler.allTimeData.received.formattedDataString())")
+                        } else {
+                            Image(systemName: "arrow.up.arrow.down")
+                        }
+                    }
+                    
+                case .onlyReceived:
+                    HStack {
+                        Image(systemName: "arrow.down")
+                        if menuHandler.isActive {
+                            Text(menuHandler.currentData.received.formattedDataString())
+                        }
+                    }
+                    
+                case .allOnlyReceived:
+                    HStack {
+                        Image(systemName: "arrow.down")
+                        if menuHandler.allTimeData.received > 0 {
+                            Text(menuHandler.allTimeData.received.formattedDataString())
+                        }
+                    }
+                    
+                case .onlySent:
+                    HStack {
+                        Image(systemName: "arrow.up")
+                        if menuHandler.isActive {
+                            Text(menuHandler.currentData.sent.formattedDataString())
+                        }
+                    }
+                    
+                case .allOnlySent:
+                    HStack {
+                        Image(systemName: "arrow.up")
+                        if menuHandler.allTimeData.received > 0 {
+                            Text(menuHandler.allTimeData.sent.formattedDataString())
+                        }
                     }
                 }
             }
@@ -173,6 +130,10 @@ enum DisplayMode: String, CaseIterable {
     case split = "Split"
     case onlySent = "Sent"
     case onlyReceived = "Received"
+    case allCombined = "AllCombined"
+    case allSplit = "AllSplit"
+    case allOnlySent = "AllSent"
+    case allOnlyReceived = "AllReceived"
 }
 
 extension UInt64 {
@@ -207,23 +168,6 @@ struct DataStruct: Codable {
     var total: UInt64
 }
 
-struct MonthlyData: Codable, Hashable {
-    var year: Int
-    var month: Int
-    var sent: UInt64
-    var received: UInt64
-    var total: UInt64
-    
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(year)
-        hasher.combine(month)
-    }
-    
-    static func == (lhs: MonthlyData, rhs: MonthlyData) -> Bool {
-        return lhs.year == rhs.year && lhs.month == rhs.month
-    }
-}
-
 class MenuHandler: NSObject, ObservableObject {
     enum NetworkState {
         case expensive, cheap
@@ -232,13 +176,7 @@ class MenuHandler: NSObject, ObservableObject {
     @Published var allTimeData = DataStruct(sent: 0, received: 0, total: 0)
     @Published var currentData = DataStruct(sent: 0, received: 0, total: 0)
     
-    @Published var monthlyDataList: [MonthlyData] = []
-    var groupedMonthlyData: [Int: [MonthlyData]] {
-        Dictionary(grouping: monthlyDataList) { $0.year }
-    }
-    
     private var lastDataUsage = DataUsageInfo()
-    
     private var dataPollingTimer: Timer?
     private var lastExpensiveDetectionTime: Date?
     
@@ -332,18 +270,6 @@ class MenuHandler: NSObject, ObservableObject {
         isActive = false
     }
     
-    private func loadMonthlyData(forYear year: Int, andMonth month: Int) -> MonthlyData? {
-        let userDefaults = UserDefaults.standard
-        let key = "monthlyData-\(year)-\(month)"
-        
-        guard let data = userDefaults.data(forKey: key) else {
-            return nil
-        }
-        
-        let decoder = JSONDecoder()
-        return try? decoder.decode(MonthlyData.self, from: data)
-    }
-    
     func invalidatePollingTimer() {
         dataPollingTimer?.invalidate()
         dataPollingTimer = nil
@@ -380,31 +306,12 @@ class MenuHandler: NSObject, ObservableObject {
         
         saveAllTimeData()
         
-        let now = Date()
-        let calendar = Calendar.current
-        let year = calendar.component(.year, from: now)
-        let month = calendar.component(.month, from: now)
-        updateMonthlyData(year: year, month: month, sent: deltaSent, received: deltaReceived)
-        
-        lastDataUsage = currentDataUsage
-        
         currentData.total = currentDataUsage.wifiComplete
         currentData.sent = currentDataUsage.wifiSent
         currentData.received = currentDataUsage.wifiReceived
         currentData.received = currentDataUsage.wifiReceived
         
         print("Total: \(currentData.total), Sent: \(currentData.sent), Received: \(currentData.received)")
-    }
-    
-    private func updateMonthlyData(year: Int, month: Int, sent: UInt64, received: UInt64) {
-        var monthlyData = loadMonthlyData(forYear: year, andMonth: month) ?? MonthlyData(year: year, month: month, sent: 0, received: 0, total: 0)
-        
-        monthlyData.sent += sent
-        monthlyData.received += received
-        monthlyData.total += (sent + received)
-        
-        saveMonthlyData(monthlyData)
-        loadAllMonthlyData()
     }
     
     private func saveAllTimeData() {
@@ -459,57 +366,6 @@ class MenuHandler: NSObject, ObservableObject {
         lastDataUsage = currentDataUsage
     }
     
-    private func loadAllMonthlyData() {
-        let userDefaults = UserDefaults.standard
-        let decoder = JSONDecoder()
-        
-        if let monthlyDataKeys = userDefaults.array(forKey: "monthlyDataKeys") as? [String] {
-            self.monthlyDataList = monthlyDataKeys.compactMap { key in
-                if let data = userDefaults.data(forKey: key),
-                   let monthlyData = try? decoder.decode(MonthlyData.self, from: data) {
-                    return monthlyData
-                }
-                return nil
-            }
-        }
-    }
-    
-    private func saveMonthlyData(_ monthlyData: MonthlyData) {
-        let userDefaults = UserDefaults.standard
-        let encoder = JSONEncoder()
-        
-        let key = "monthlyData-\(monthlyData.year)-\(monthlyData.month)"
-        if let encoded = try? encoder.encode(monthlyData) {
-            userDefaults.set(encoded, forKey: key)
-            
-            if !monthlyDataList.contains(where: { $0.year == monthlyData.year && $0.month == monthlyData.month }) {
-                monthlyDataList.append(monthlyData)
-            }
-            
-            monthlyDataList.sort { ($0.year, $0.month) > ($1.year, $1.month) }
-            if monthlyDataList.count > 12 {
-                monthlyDataList.removeSubrange(12...)
-            }
-            
-            let keys = monthlyDataList.map { "monthlyData-\($0.year)-\($0.month)" }
-            userDefaults.set(keys, forKey: "monthlyDataKeys")
-        }
-    }
-    
-    func clearAllMonthlyData() {
-        let userDefaults = UserDefaults.standard
-        
-        if let monthlyDataKeys = userDefaults.array(forKey: "monthlyDataKeys") as? [String] {
-            for key in monthlyDataKeys {
-                userDefaults.removeObject(forKey: key)
-            }
-        }
-        
-        userDefaults.set([], forKey: "monthlyDataKeys")
-        
-        monthlyDataList.removeAll()
-    }
-    
     override init() {
         self.isRunAtStartupEnabled = (SMAppService.mainApp.status == .enabled)
         
@@ -530,7 +386,6 @@ class MenuHandler: NSObject, ObservableObject {
         super.init()
         
         setBaselineValues()
-        loadAllMonthlyData()
         startMonitoringNetwork()
     }
     
@@ -545,11 +400,4 @@ extension Date {
         dateFormatter.dateFormat = "MMMM d yyyy, HH:mm"
         return dateFormatter.string(from: self)
     }
-}
-
-func monthName(from monthNumber: Int) -> String {
-    let dateFormatter = DateFormatter()
-    dateFormatter.dateFormat = "MMMM"
-    let date = Calendar.current.date(from: DateComponents(month: monthNumber))!
-    return dateFormatter.string(from: date)
 }
