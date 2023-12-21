@@ -11,7 +11,6 @@
 		C1A19BCB2B0F55F000FA060D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C1A19BCA2B0F55F000FA060D /* Assets.xcassets */; };
 		C1A19BCE2B0F55F000FA060D /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C1A19BCD2B0F55F000FA060D /* Preview Assets.xcassets */; };
 		C1A19BD72B0F617300FA060D /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C1A19BD62B0F617300FA060D /* Metal.framework */; };
-		C1B3A0AF2B294995009B1D1A /* SystemDataUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1B3A0AE2B294995009B1D1A /* SystemDataUsage.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -21,7 +20,6 @@
 		C1A19BCD2B0F55F000FA060D /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		C1A19BCF2B0F55F000FA060D /* Hotspot_Meter.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Hotspot_Meter.entitlements; sourceTree = "<group>"; };
 		C1A19BD62B0F617300FA060D /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
-		C1B3A0AE2B294995009B1D1A /* SystemDataUsage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemDataUsage.swift; sourceTree = "<group>"; };
 		C1BC52272B214F38006551E3 /* Hotspot_Meter_Bridging_Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Hotspot_Meter_Bridging_Header.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -59,7 +57,6 @@
 			children = (
 				C1BC52272B214F38006551E3 /* Hotspot_Meter_Bridging_Header.h */,
 				C1A19BC62B0F55F000FA060D /* App.swift */,
-				C1B3A0AE2B294995009B1D1A /* SystemDataUsage.swift */,
 				C1A19BCA2B0F55F000FA060D /* Assets.xcassets */,
 				C1A19BCF2B0F55F000FA060D /* Hotspot_Meter.entitlements */,
 				C1A19BCC2B0F55F000FA060D /* Preview Content */,
@@ -153,7 +150,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C1B3A0AF2B294995009B1D1A /* SystemDataUsage.swift in Sources */,
 				C1A19BC72B0F55F000FA060D /* App.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
