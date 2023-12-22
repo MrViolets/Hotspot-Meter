@@ -34,6 +34,13 @@ struct MenuBar: App {
     
     var body: some Scene {
         MenuBarExtra {
+            if menuHandler.isActive {
+                Text("Monitoring")
+            } else {
+                Text("Not Monitoring")
+            }
+            
+            Divider()
             
             Menu("Counter") {
                 Picker("Type", selection: $menuHandler.currentType) {
