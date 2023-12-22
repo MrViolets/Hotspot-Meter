@@ -62,6 +62,7 @@ struct MenuBar: App {
                 menuHandler.resetDataUsageCounters()
                 menuHandler.resetAllTimeData()
             }.keyboardShortcut("r")
+                .disabled(menuHandler.allTimeData.total == 0)
             
             Divider()
             
