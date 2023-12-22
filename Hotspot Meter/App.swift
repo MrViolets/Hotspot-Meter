@@ -12,121 +12,140 @@ import ServiceManagement
 
 public enum Keys {
     static let displayMode = "displayMode"
+    static let counterType = "counterType"
     static let allTimeDataRecord = "allTimeDataRecord"
+}
+
+enum CounterType: String {
+    case session
+    case accumulative
+}
+
+enum DisplayMode: String {
+    case combined
+    case split
+    case sent
+    case received
 }
 
 @main
 struct MenuBar: App {
     @StateObject private var menuHandler = MenuHandler()
     
-    init() {
-        let defaultDataStruct = DataStruct(sent: 0, received: 0, total: 0)
-        let defaultDataStructEncoded = try? JSONEncoder().encode(defaultDataStruct)
-        
-        UserDefaults.standard.register(defaults: [
-            Keys.displayMode: DisplayMode.combined.rawValue,
-            Keys.allTimeDataRecord: defaultDataStructEncoded ?? Data()
-        ])
-    }
-    
     var body: some Scene {
         MenuBarExtra {
-            Text("Total Usage")
-                .font(.system(.body, weight: .medium))
-            Menu {
-                Text("Total: \(menuHandler.allTimeData.total.formattedDataString())")
-                Text("Sent: \(menuHandler.allTimeData.sent.formattedDataString())")
-                Text("Received: \(menuHandler.allTimeData.received.formattedDataString())")
-                Divider()
-                Button("Reset", action: menuHandler.resetAllTimeData)
-            } label: {
-                Text("\(menuHandler.allTimeData.total.formattedDataString())")
+            if menuHandler.isActive {
+                Text("Monitoring")
+            } else {
+                Text("Not Monitoring")
             }
-            if !menuHandler.recentSessions.isEmpty {
-                Divider()
-                Menu("Recent Sessions") {
-                    ForEach(menuHandler.recentSessions.indices, id: \.self) { index in
-                        let session = menuHandler.recentSessions[index]
-                        Menu {
-                            Text("\(session.date.formattedForRecentSessions())")
-                            Divider()
-                            Text("Total: \(session.total.formattedDataString())")
-                            Text("Sent: \(session.sent.formattedDataString())")
-                            Text("Received: \(session.received.formattedDataString())")
-                        } label: {
-                            Text("\(session.total.formattedDataString())")
-                        }
-                    }
-                    Divider()
-                    Button("Clear", action: menuHandler.clearSessions)
+            
+            Divider()
+            
+            Menu("Counter") {
+                Picker("Type", selection: $menuHandler.currentType) {
+                    Text("Session").tag(CounterType.session)
+                    Text("Accumulative").tag(CounterType.accumulative)
                 }
+                .pickerStyle(InlinePickerStyle())
+                
+                Picker("Display", selection: $menuHandler.currentDisplayMode) {
+                    Text("Combined").tag(DisplayMode.combined)
+                    Text("Split").tag(DisplayMode.split)
+                    Text("Sent").tag(DisplayMode.sent)
+                    Text("Received").tag(DisplayMode.received)
+                }
+                .pickerStyle(InlinePickerStyle())
             }
+            
+            Button("Reset Counters") {
+                menuHandler.resetDataUsageCounters()
+                menuHandler.resetAllTimeData()
+            }.keyboardShortcut("r")
+            
             Divider()
-            Picker("Counter Display", selection: $menuHandler.currentDisplayMode) {
-                ForEach(DisplayMode.allCases, id: \.self) { mode in
-                    Text(mode.rawValue).tag(mode)
-                }
-            }.pickerStyle(MenuPickerStyle())
-            Toggle("Start at Login", isOn: $menuHandler.isRunAtStartupEnabled)
+            
+            Toggle("Launch at Login", isOn: $menuHandler.isRunAtStartupEnabled)
+            
             Divider()
+            
             Button("Quit") {
                 NSApp.terminate(self)
             }.keyboardShortcut("q")
-            
         } label: {
-            switch menuHandler.currentDisplayMode {
-            case .combined:
-                HStack {
-                    Image(systemName: "arrow.up.arrow.down")
-                    if menuHandler.isActive {
-                        Text(menuHandler.currentData.total.formattedDataString())
+            Group {
+                if menuHandler.currentType == .session {
+                    switch menuHandler.currentDisplayMode {
+                    case .combined:
+                        HStack {
+                            Image(systemName: "arrow.up.arrow.down")
+                            if menuHandler.isActive {
+                                Text(menuHandler.currentData.total.formattedDataString())
+                            }
+                        }
+                        
+                    case .split:
+                        HStack {
+                            if !menuHandler.isActive {
+                                Image(systemName: "arrow.up.arrow.down")
+                            } else {
+                                Text("↑ \(menuHandler.currentData.sent.formattedDataString()) ↓ \(menuHandler.currentData.received.formattedDataString())")
+                            }
+                        }
+                        
+                    case .sent:
+                        HStack {
+                            Image(systemName: "arrow.up")
+                            if menuHandler.isActive {
+                                Text(menuHandler.currentData.sent.formattedDataString())
+                            }
+                        }
+                        
+                    case .received:
+                        HStack {
+                            Image(systemName: "arrow.down")
+                            if menuHandler.isActive {
+                                Text(menuHandler.currentData.received.formattedDataString())
+                            }
+                        }
                     }
-                }
-                
-            case .split:
-                HStack {
-                    if !menuHandler.isActive {
-                        Image(systemName: "arrow.up.arrow.down")
-                    } else {
-                        Text("↑ \(menuHandler.currentData.sent.formattedDataString())  ↓ \(menuHandler.currentData.received.formattedDataString())")
-                    }
-                }
-                
-            case .onlyReceived:
-                HStack {
-                    Image(systemName: "arrow.down")
-                    if menuHandler.isActive {
-                        Text(menuHandler.currentData.received.formattedDataString())
-                    }
-                }
-                
-            case .onlySent:
-                HStack {
-                    Image(systemName: "arrow.up")
-                    if menuHandler.isActive {
-                        Text(menuHandler.currentData.sent.formattedDataString())
+                } else if menuHandler.currentType == .accumulative {
+                    switch menuHandler.currentDisplayMode {
+                    case .combined:
+                        HStack {
+                            Image(systemName: "arrow.up.arrow.down")
+                            if menuHandler.allTimeData.total > 0 {
+                                Text(menuHandler.allTimeData.total.formattedDataString())
+                            }
+                        }
+                        
+                    case .split:
+                        HStack {
+                            if menuHandler.allTimeData.total == 0 {
+                                Image(systemName: "arrow.up.arrow.down")
+                            } else {
+                                Text("↑ \(menuHandler.allTimeData.sent.formattedDataString()) ↓ \(menuHandler.allTimeData.received.formattedDataString())")
+                            }
+                        }
+                        
+                    case .sent:
+                        HStack {
+                            Image(systemName: "arrow.up")
+                            if menuHandler.allTimeData.sent > 0 {
+                                Text(menuHandler.allTimeData.sent.formattedDataString())
+                            }
+                        }
+                        
+                    case .received:
+                        HStack {
+                            Image(systemName: "arrow.down")
+                            if menuHandler.allTimeData.received > 0 {
+                                Text(menuHandler.allTimeData.received.formattedDataString())
+                            }
+                        }
                     }
                 }
             }
-        }
-    }
-}
-
-enum DisplayMode: String, CaseIterable {
-    case combined = "Combined"
-    case split = "Split"
-    case onlySent = "Sent"
-    case onlyReceived = "Received"
-}
-
-extension UInt64 {
-    func formattedDataString() -> String {
-        if self < (1000 * 1000) {
-            return String(format: "%d KB", self / 1000)
-        } else if self < (1000 * 1000 * 1000) {
-            return String(format: "%.1f MB", Double(self) / (1000.0 * 1000.0))
-        } else {
-            return String(format: "%.1f GB", Double(self) / (1000.0 * 1000.0 * 1000.0))
         }
     }
 }
@@ -151,13 +170,6 @@ struct DataStruct: Codable {
     var total: UInt64
 }
 
-struct SessionData: Codable {
-    let date: Date
-    let sent: UInt64
-    let received: UInt64
-    let total: UInt64
-}
-
 class MenuHandler: NSObject, ObservableObject {
     enum NetworkState {
         case expensive, cheap
@@ -166,14 +178,17 @@ class MenuHandler: NSObject, ObservableObject {
     @Published var allTimeData = DataStruct(sent: 0, received: 0, total: 0)
     @Published var currentData = DataStruct(sent: 0, received: 0, total: 0)
     
-    @Published var recentSessions: [SessionData] = []
-    
     private var lastDataUsage = DataUsageInfo()
-    
     private var dataPollingTimer: Timer?
     private var lastExpensiveDetectionTime: Date?
     
     @Published var isActive: Bool = false
+    @Published var currentType: CounterType {
+        didSet {
+            UserDefaults.standard.set(currentType.rawValue, forKey: Keys.counterType)
+        }
+    }
+    
     @Published var currentDisplayMode: DisplayMode {
         didSet {
             UserDefaults.standard.set(currentDisplayMode.rawValue, forKey: Keys.displayMode)
@@ -211,12 +226,7 @@ class MenuHandler: NSObject, ObservableObject {
                 case true:
                     guard self.currentState != .expensive else { return }
                     
-                    print("expensive connection detected")
-                    
                     if self.lastExpensiveDetectionTime == nil || Date().timeIntervalSince(self.lastExpensiveDetectionTime!) > 3.5 {
-                        if self.currentData.total != 0 {
-                            self.saveSession()
-                        }
                         self.stopPollingData()
                     }
                     
@@ -237,13 +247,13 @@ class MenuHandler: NSObject, ObservableObject {
                     guard self.currentState != .cheap else { return }
                     
                     print("cheap connection detected")
-                    self.saveSession()
                     self.stopPollingData()
                     
                     self.currentState = .cheap
                 }
             }
         }
+        
         let queue = DispatchQueue(label: "NetworkMonitor")
         monitor.start(queue: queue)
     }
@@ -266,43 +276,17 @@ class MenuHandler: NSObject, ObservableObject {
         isActive = false
     }
     
-    func saveSession() {
-        print("Saving session")
-        let session = SessionData(
-            date: Date(),
-            sent: currentData.sent,
-            received: currentData.received,
-            total: currentData.total
-        )
-        
-        recentSessions.insert(session, at: 0)
-        if recentSessions.count > 10 {
-            recentSessions.removeLast()
-        }
-        
-        if let data = try? JSONEncoder().encode(recentSessions) {
-            UserDefaults.standard.set(data, forKey: "recentSessions")
-        }
-    }
-    
-    private func loadRecentSessions() {
-        if let data = UserDefaults.standard.data(forKey: "recentSessions"),
-           let sessions = try? JSONDecoder().decode([SessionData].self, from: data) {
-            self.recentSessions = sessions
-        }
-    }
-    
     func invalidatePollingTimer() {
         dataPollingTimer?.invalidate()
         dataPollingTimer = nil
     }
     
-    var baselineWifiReceived: UInt64 = 0
-    var baselineWifiSent: UInt64 = 0
-    var previousWifiReceived: UInt64 = 0
-    var previousWifiSent: UInt64 = 0
-    var wifiReceivedRollovers: UInt64 = 0
-    var wifiSentRollovers: UInt64 = 0
+    private var baselineWifiReceived: UInt64 = 0
+    private var baselineWifiSent: UInt64 = 0
+    private var previousWifiReceived: UInt64 = 0
+    private var previousWifiSent: UInt64 = 0
+    private var wifiReceivedRollovers: UInt64 = 0
+    private var wifiSentRollovers: UInt64 = 0
     
     func printNetworkUsage() {
         let currentDataUsage = getDataUsageSinceBaseline()
@@ -328,11 +312,10 @@ class MenuHandler: NSObject, ObservableObject {
         
         saveAllTimeData()
         
-        lastDataUsage = currentDataUsage
-        
         currentData.total = currentDataUsage.wifiComplete
-        currentData.received = currentDataUsage.wifiReceived
         currentData.sent = currentDataUsage.wifiSent
+        currentData.received = currentDataUsage.wifiReceived
+        currentData.received = currentDataUsage.wifiReceived
         
         print("Total: \(currentData.total), Sent: \(currentData.sent), Received: \(currentData.received)")
     }
@@ -346,11 +329,6 @@ class MenuHandler: NSObject, ObservableObject {
     func resetAllTimeData() {
         allTimeData = DataStruct(sent: 0, received: 0, total: 0)
         saveAllTimeData()
-    }
-    
-    func clearSessions() {
-        recentSessions.removeAll()
-        UserDefaults.standard.removeObject(forKey: "recentSessions")
     }
     
     func setBaselineValues() {
@@ -397,6 +375,13 @@ class MenuHandler: NSObject, ObservableObject {
     override init() {
         self.isRunAtStartupEnabled = (SMAppService.mainApp.status == .enabled)
         
+        if let savedCounterType = UserDefaults.standard.string(forKey: Keys.counterType),
+           let counterType = CounterType(rawValue: savedCounterType) {
+            self.currentType = counterType
+        } else {
+            self.currentType = .session
+        }
+        
         if let savedDisplayMode = UserDefaults.standard.string(forKey: Keys.displayMode),
            let displayMode = DisplayMode(rawValue: savedDisplayMode) {
             self.currentDisplayMode = displayMode
@@ -414,7 +399,6 @@ class MenuHandler: NSObject, ObservableObject {
         super.init()
         
         setBaselineValues()
-        loadRecentSessions()
         startMonitoringNetwork()
     }
     
@@ -428,5 +412,61 @@ extension Date {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "MMMM d yyyy, HH:mm"
         return dateFormatter.string(from: self)
+    }
+}
+
+extension UInt64 {
+    func formattedDataString() -> String {
+        if self < (1000 * 1000) {
+            return String(format: "%d KB", self / 1000)
+        } else if self < (1000 * 1000 * 1000) {
+            return String(format: "%.1f MB", Double(self) / (1000.0 * 1000.0))
+        } else {
+            return String(format: "%.1f GB", Double(self) / (1000.0 * 1000.0 * 1000.0))
+        }
+    }
+}
+
+class SystemDataUsage {
+    private static let wifiInterfacePrefix = "en"
+    
+    class func getDataUsage() -> DataUsageInfo {
+        var ifaddr: UnsafeMutablePointer<ifaddrs>?
+        var dataUsageInfo = DataUsageInfo()
+
+        guard getifaddrs(&ifaddr) == 0 else { return dataUsageInfo }
+        defer { freeifaddrs(ifaddr) }
+
+        var currentAddr = ifaddr
+        while let addr = currentAddr {
+            if let info = getDataUsageInfo(from: &addr.pointee) {
+                dataUsageInfo.updateInfoByAdding(info)
+            }
+            currentAddr = addr.pointee.ifa_next
+        }
+
+        return dataUsageInfo
+    }
+    
+    private class func getDataUsageInfo(from infoPointer: UnsafeMutablePointer<ifaddrs>) -> DataUsageInfo? {
+        guard let name = String(cString: infoPointer.pointee.ifa_name, encoding: .utf8) else { return nil }
+        let addr = infoPointer.pointee.ifa_addr.pointee
+        guard addr.sa_family == UInt8(AF_LINK) else { return nil }
+        
+        return dataUsageInfo(from: infoPointer, name: name)
+    }
+    
+    private class func dataUsageInfo(from pointer: UnsafeMutablePointer<ifaddrs>, name: String) -> DataUsageInfo {
+        var dataUsageInfo = DataUsageInfo()
+
+        if name.hasPrefix(wifiInterfacePrefix),
+           pointer.pointee.ifa_addr.pointee.sa_family == UInt8(AF_LINK) {
+            if let networkData = pointer.pointee.ifa_data?.assumingMemoryBound(to: if_data.self) {
+                dataUsageInfo.wifiSent += UInt64(networkData.pointee.ifi_obytes)
+                dataUsageInfo.wifiReceived += UInt64(networkData.pointee.ifi_ibytes)
+            }
+        }
+
+        return dataUsageInfo
     }
 }
