@@ -318,6 +318,9 @@ class MenuHandler: NSObject, ObservableObject {
         currentData.received = currentDataUsage.wifiReceived
         
         print("Total: \(currentData.total), Sent: \(currentData.sent), Received: \(currentData.received)")
+        print("Total: \(allTimeData.total), Sent: \(allTimeData.sent), Received: \(allTimeData.received)")
+        
+        lastDataUsage = currentDataUsage
     }
     
     private func saveAllTimeData() {
