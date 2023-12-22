@@ -34,6 +34,7 @@ struct MenuBar: App {
     
     var body: some Scene {
         MenuBarExtra {
+            
             Menu("Counter") {
                 Picker("Type", selection: $menuHandler.currentType) {
                     Text("Session").tag(CounterType.session)
@@ -53,7 +54,7 @@ struct MenuBar: App {
             Button("Reset Counters") {
                 menuHandler.resetDataUsageCounters()
                 menuHandler.resetAllTimeData()
-            }
+            }.keyboardShortcut("r")
             
             Divider()
             
