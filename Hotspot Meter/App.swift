@@ -437,10 +437,10 @@ class SystemDataUsage {
     class func getDataUsage() -> DataUsageInfo {
         var ifaddr: UnsafeMutablePointer<ifaddrs>?
         var dataUsageInfo = DataUsageInfo()
-
+        
         guard getifaddrs(&ifaddr) == 0 else { return dataUsageInfo }
         defer { freeifaddrs(ifaddr) }
-
+        
         var currentAddr = ifaddr
         while let addr = currentAddr {
             if let info = getDataUsageInfo(from: &addr.pointee) {
@@ -448,7 +448,7 @@ class SystemDataUsage {
             }
             currentAddr = addr.pointee.ifa_next
         }
-
+        
         return dataUsageInfo
     }
     
@@ -462,7 +462,7 @@ class SystemDataUsage {
     
     private class func dataUsageInfo(from pointer: UnsafeMutablePointer<ifaddrs>, name: String) -> DataUsageInfo {
         var dataUsageInfo = DataUsageInfo()
-
+        
         if name.hasPrefix(wifiInterfacePrefix),
            pointer.pointee.ifa_addr.pointee.sa_family == UInt8(AF_LINK) {
             if let networkData = pointer.pointee.ifa_data?.assumingMemoryBound(to: if_data.self) {
@@ -470,7 +470,7 @@ class SystemDataUsage {
                 dataUsageInfo.wifiReceived += UInt64(networkData.pointee.ifi_ibytes)
             }
         }
-
+        
         return dataUsageInfo
     }
 }
