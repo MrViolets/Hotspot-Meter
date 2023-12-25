@@ -35,34 +35,34 @@ struct MenuBar: App {
     var body: some Scene {
         MenuBarExtra {
             if menuHandler.isActive {
-                Text("Monitoring")
+                Text("Active")
             } else {
-                Text("Not Monitoring")
+                Text("Inactive")
             }
+            
+            Button("Reset") {
+                menuHandler.resetDataUsageCounters()
+                menuHandler.resetAllTimeData()
+            }.keyboardShortcut("r")
+                .disabled(menuHandler.allTimeData.total == 0)
             
             Divider()
             
-            Menu("Counter") {
-                Picker("Type", selection: $menuHandler.currentType) {
-                    Text("Session").tag(CounterType.session)
-                    Text("Accumulative").tag(CounterType.accumulative)
+            Menu("Preferences") {
+                Picker("Monitor", selection: $menuHandler.currentType) {
+                    Text("Current Session").tag(CounterType.session)
+                    Text("All Usage").tag(CounterType.accumulative)
                 }
                 .pickerStyle(InlinePickerStyle())
                 
                 Picker("Display", selection: $menuHandler.currentDisplayMode) {
                     Text("Combined").tag(DisplayMode.combined)
-                    Text("Split").tag(DisplayMode.split)
+                    Text("Detailed").tag(DisplayMode.split)
                     Text("Sent").tag(DisplayMode.sent)
                     Text("Received").tag(DisplayMode.received)
                 }
                 .pickerStyle(InlinePickerStyle())
             }
-            
-            Button("Reset Counters") {
-                menuHandler.resetDataUsageCounters()
-                menuHandler.resetAllTimeData()
-            }.keyboardShortcut("r")
-                .disabled(menuHandler.allTimeData.total == 0)
             
             Divider()
             
