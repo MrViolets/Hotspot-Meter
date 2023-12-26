@@ -49,7 +49,7 @@ struct MenuBar: App {
             Divider()
             
             Menu("Preferences") {
-                Picker("Monitor", selection: $menuHandler.currentType) {
+                Picker("Usage View", selection: $menuHandler.currentType) {
                     Text("Current Session").tag(CounterType.session)
                     Text("All Usage").tag(CounterType.accumulative)
                 }
